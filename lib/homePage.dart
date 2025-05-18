@@ -13,7 +13,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Home")),
-      body: SingleChildScrollView( // ✅ Make the page scrollable
+      body: SingleChildScrollView( //  Make the page scrollable
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -31,8 +31,8 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 20),
               GridView.count(
                 crossAxisCount: 2,
-                shrinkWrap: true, // ✅ Ensure GridView takes only needed height
-                physics: const NeverScrollableScrollPhysics(), // ✅ Prevent internal scrolling
+                shrinkWrap: true, //  Ensure GridView takes only needed height
+                physics: const NeverScrollableScrollPhysics(), //  Prevent internal scrolling
                 crossAxisSpacing: 20,
                 mainAxisSpacing: 20,
                 childAspectRatio: 1.2,
