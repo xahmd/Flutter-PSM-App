@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
+import 'pages/payment/payment_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   void _onSectionTap(BuildContext context, String sectionName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$sectionName page clicked (to be implemented)')),
-    );
+    if (sectionName == "Payment") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const PaymentPage()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$sectionName page clicked (to be implemented)')),
+      );
+    }
   }
 
   @override
@@ -51,27 +59,23 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildSectionButton(BuildContext context, String title, IconData icon) {
-    return GestureDetector(
-      onTap: () => _onSectionTap(context, title),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.orange.shade100,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.shade400,
-              blurRadius: 4,
-              offset: const Offset(2, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 40, color: Colors.orange),
-            const SizedBox(height: 10),
-            Text(title, style: const TextStyle(fontSize: 16)),
-          ],
+    return Card(
+      elevation: 4,
+      child: InkWell(
+        onTap: () => _onSectionTap(context, title),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 40, color: Colors.deepOrange),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ),
       ),
     );
