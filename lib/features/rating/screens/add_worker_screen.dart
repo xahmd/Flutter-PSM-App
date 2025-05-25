@@ -390,7 +390,7 @@ class _AddWorkerScreenState extends State<AddWorkerScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context, true); // Return true to indicate success
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {

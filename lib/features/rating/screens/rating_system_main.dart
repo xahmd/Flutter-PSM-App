@@ -3,7 +3,7 @@ import '../models/rating.dart';
 import '../services/rating_service.dart';
 
 class RatingSystemMain extends StatefulWidget {
-  const RatingSystemMain({Key? key}) : super(key: key);
+  const RatingSystemMain({super.key});
 
   @override
   State<RatingSystemMain> createState() => _RatingSystemMainState();

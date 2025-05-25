@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'owner/create_rating_screen.dart';
 
 class RatingTestScreen extends StatefulWidget {
-  const RatingTestScreen({Key? key}) : super(key: key);
+  const RatingTestScreen({super.key});
 
   @override
   State<RatingTestScreen> createState() => _RatingTestScreenState();
@@ -219,7 +219,7 @@ class _RatingTestScreenState extends State<RatingTestScreen>
             ),
           ),
         ),
-        ...workers.map((worker) => _buildWorkerCard(worker)).toList(),
+        ...workers.map((worker) => _buildWorkerCard(worker)),
       ],
     );
   }

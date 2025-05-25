@@ -6,7 +6,7 @@ import '../../services/rating_service.dart';
 class ForemanRatingsView extends StatelessWidget {
   final RatingService _ratingService = RatingService();
 
-  ForemanRatingsView({Key? key}) : super(key: key);
+  ForemanRatingsView({super.key});
 
   @override
   Widget build(BuildContext context) {

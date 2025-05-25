@@ -6,7 +6,7 @@ import 'create_rating_screen.dart';
 class OwnerRatingsDashboard extends StatelessWidget {
   final RatingService _ratingService = RatingService();
 
-  OwnerRatingsDashboard({Key? key}) : super(key: key);
+  OwnerRatingsDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {

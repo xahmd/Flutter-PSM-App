@@ -3,7 +3,7 @@ import '../models/rating.dart';
 import '../services/rating_service.dart';
 
 class WorkshopReportsScreen extends StatefulWidget {
-  const WorkshopReportsScreen({Key? key}) : super(key: key);
+  const WorkshopReportsScreen({super.key});
 
   @override
   State<WorkshopReportsScreen> createState() => _WorkshopReportsScreenState();
@@ -160,7 +160,7 @@ class _WorkshopReportsScreenState extends State<WorkshopReportsScreen>
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        ...recentRatings.map((rating) => _buildActivityItem(rating)).toList(),
+        ...recentRatings.map((rating) => _buildActivityItem(rating)),
       ],
     );
   }

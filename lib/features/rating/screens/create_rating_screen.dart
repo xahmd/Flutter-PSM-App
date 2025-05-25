@@ -8,10 +8,10 @@ class CreateRatingScreen extends StatefulWidget {
   final String workerName;
 
   const CreateRatingScreen({
-    Key? key,
+    super.key,
     required this.workerId,
     required this.workerName,
-  }) : super(key: key);
+  });
 
   @override
   State<CreateRatingScreen> createState() => _CreateRatingScreenState();

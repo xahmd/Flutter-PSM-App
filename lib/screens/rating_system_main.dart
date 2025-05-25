@@ -5,7 +5,7 @@ import 'owner/owner_ratings_dashboard.dart';
 import 'foreman/foreman_ratings_view.dart';
 
 class RatingSystemMain extends StatefulWidget {
-  const RatingSystemMain({Key? key}) : super(key: key);
+  const RatingSystemMain({super.key});
 
   @override
   State<RatingSystemMain> createState() => _RatingSystemMainState();
@@ -72,7 +72,7 @@ class _RatingSystemMainState extends State<RatingSystemMain> {
 
 // Helper widget for role selection (for testing purposes)
 class RoleSelectionScreen extends StatelessWidget {
-  const RoleSelectionScreen({Key? key}) : super(key: key);
+  const RoleSelectionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

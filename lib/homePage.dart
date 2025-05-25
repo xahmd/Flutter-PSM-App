@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
+// Add rating system imports
+import 'features/rating/screens/rating_test_screen.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  bool _showRatingSection = false;
+
   void _onSectionTap(BuildContext context, String sectionName) {
-    if (sectionName == "Payment") {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const PaymentPage()),
-      );
+    if (sectionName == "Rating") {
+      setState(() {
+        _showRatingSection = true;
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$sectionName page clicked (to be implemented)')),
@@ -18,9 +26,29 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // If rating section is shown, display it instead of regular home content
+    if (_showRatingSection) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Workshop Rating System'),
+          backgroundColor: const Color(0xFF2C3E50),
+          foregroundColor: Colors.white,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              setState(() {
+                _showRatingSection = false;
+              });
+            },
+          ),
+        ),
+        body: const RatingTestScreen(embedded: true),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text("Home")),
-      body: SingleChildScrollView( //  Make the page scrollable
+      body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -38,8 +66,8 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 20),
               GridView.count(
                 crossAxisCount: 2,
-                shrinkWrap: true, //  Ensure GridView takes only needed height
-                physics: const NeverScrollableScrollPhysics(), //  Prevent internal scrolling
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 20,
                 mainAxisSpacing: 20,
                 childAspectRatio: 1.2,
