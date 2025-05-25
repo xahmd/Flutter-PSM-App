@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
+
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   void _onSectionTap(BuildContext context, String sectionName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$sectionName page clicked (to be implemented)')),
-    );
+    if (sectionName == "Payment") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const PaymentPage()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$sectionName page clicked (to be implemented)')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Home")),
-      body: SingleChildScrollView( // ✅ Make the page scrollable
+      body: SingleChildScrollView( //  Make the page scrollable
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -30,8 +38,8 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 20),
               GridView.count(
                 crossAxisCount: 2,
-                shrinkWrap: true, // ✅ Ensure GridView takes only needed height
-                physics: const NeverScrollableScrollPhysics(), // ✅ Prevent internal scrolling
+                shrinkWrap: true, //  Ensure GridView takes only needed height
+                physics: const NeverScrollableScrollPhysics(), //  Prevent internal scrolling
                 crossAxisSpacing: 20,
                 mainAxisSpacing: 20,
                 childAspectRatio: 1.2,
@@ -50,27 +58,23 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildSectionButton(BuildContext context, String title, IconData icon) {
-    return GestureDetector(
-      onTap: () => _onSectionTap(context, title),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.orange.shade100,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.shade400,
-              blurRadius: 4,
-              offset: const Offset(2, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 40, color: Colors.orange),
-            const SizedBox(height: 10),
-            Text(title, style: const TextStyle(fontSize: 16)),
-          ],
+    return Card(
+      elevation: 4,
+      child: InkWell(
+        onTap: () => _onSectionTap(context, title),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 40, color: Colors.deepOrange),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ),
       ),
     );
