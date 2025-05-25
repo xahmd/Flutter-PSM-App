@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'registration_form.dart';
 
 class LandPage extends StatelessWidget {
-  const LandPage({Key? key}) : super(key: key);
+  const LandPage({super.key});
 
   @override
   Widget build(BuildContext context) {

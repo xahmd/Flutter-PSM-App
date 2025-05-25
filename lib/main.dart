@@ -4,7 +4,8 @@ import 'firebase_options.dart';
 import 'login_page.dart';
 import 'registration_form.dart';
 import 'homePage.dart';
-import 'land_page.dart'; // Import LandPage
+import 'land_page.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +33,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegistrationForm(),
         '/home': (context) => const HomePage(),
+        '/land': (context) => const LandPage(),
       },
     );
   }
