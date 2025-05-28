@@ -1,11 +1,11 @@
 class Rating {
   final String id;
-  final String workerId;
-  final String workerName;
+  final String foremanId;
+  final String foremanName;
   final String ownerId;
   final String ownerName;
   final int overallRating;
-  final int technicalRating;
+  final int qualityRating;
   final int timelinessRating;
   final int communicationRating;
   final int safetyRating;
@@ -15,12 +15,12 @@ class Rating {
 
   Rating({
     required this.id,
-    required this.workerId,
-    required this.workerName,
+    required this.foremanId,
+    required this.foremanName,
     required this.ownerId,
     required this.ownerName,
     required this.overallRating,
-    required this.technicalRating,
+    required this.qualityRating,
     required this.timelinessRating,
     required this.communicationRating,
     required this.safetyRating,
@@ -32,12 +32,12 @@ class Rating {
   factory Rating.fromJson(Map<String, dynamic> json) {
     return Rating(
       id: json['id'] ?? '',
-      workerId: json['workerId'] ?? '',
-      workerName: json['workerName'] ?? '',
+      foremanId: json['foremanId'] ?? '',
+      foremanName: json['foremanName'] ?? '',
       ownerId: json['ownerId'] ?? '',
       ownerName: json['ownerName'] ?? '',
       overallRating: json['overallRating'] ?? 0,
-      technicalRating: json['technicalRating'] ?? 0,
+      qualityRating: json['qualityRating'] ?? 0,
       timelinessRating: json['timelinessRating'] ?? 0,
       communicationRating: json['communicationRating'] ?? 0,
       safetyRating: json['safetyRating'] ?? 0,
@@ -50,12 +50,12 @@ class Rating {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'workerId': workerId,
-      'workerName': workerName,
+      'foremanId': foremanId,
+      'foremanName': foremanName,
       'ownerId': ownerId,
       'ownerName': ownerName,
       'overallRating': overallRating,
-      'technicalRating': technicalRating,
+      'qualityRating': qualityRating,
       'timelinessRating': timelinessRating,
       'communicationRating': communicationRating,
       'safetyRating': safetyRating,
@@ -66,7 +66,7 @@ class Rating {
   }
 
   double get averageRating {
-    return (overallRating + technicalRating + timelinessRating + 
+    return (overallRating + qualityRating + timelinessRating +
             communicationRating + safetyRating) / 5.0;
   }
 }

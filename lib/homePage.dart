@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-// Add rating system imports
-import 'features/rating/screens/rating_test_screen.dart';
+// Update rating system import to use the new dashboard
+import 'features/rating/screens/rating_dashboard.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -30,7 +30,7 @@ class _HomePageState extends State<HomePage> {
     if (_showRatingSection) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Workshop Rating System'),
+          title: const Text('Rating System'),
           backgroundColor: const Color(0xFF2C3E50),
           foregroundColor: Colors.white,
           leading: IconButton(
@@ -42,7 +42,7 @@ class _HomePageState extends State<HomePage> {
             },
           ),
         ),
-        body: const RatingTestScreen(embedded: true),
+        body: const RatingDashboard(),
       );
     }
 

@@ -4,14 +4,14 @@ import '../models/rating.dart';
 import '../services/rating_service.dart';
 
 class CreateRatingScreen extends StatefulWidget {
-  final String workerId;
-  final String workerName;
+  final String foremanId;
+  final String foremanName;
 
   const CreateRatingScreen({
-    super.key,
-    required this.workerId,
-    required this.workerName,
-  });
+    Key? key,
+    required this.foremanId,
+    required this.foremanName,
+  }) : super(key: key);
 
   @override
   State<CreateRatingScreen> createState() => _CreateRatingScreenState();
@@ -24,7 +24,7 @@ class _CreateRatingScreenState extends State<CreateRatingScreen> {
   final _projectNameController = TextEditingController();
 
   int _overallRating = 5;
-  int _technicalRating = 5;
+  int _qualityRating = 5;
   int _timelinessRating = 5;
   int _communicationRating = 5;
   int _safetyRating = 5;
@@ -32,12 +32,18 @@ class _CreateRatingScreenState extends State<CreateRatingScreen> {
   bool _isSubmitting = false;
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Rate Worker: ${widget.workerName}'),
+        title: Text('Rate ${widget.foremanName}'),
         backgroundColor: const Color(0xFF2C3E50),
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -54,19 +60,25 @@ class _CreateRatingScreenState extends State<CreateRatingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildWorkerInfo(),
-                const SizedBox(height: 24),
+                _buildForemanInfo(),
+                const SizedBox(height: 16),
                 _buildProjectNameField(),
                 const SizedBox(height: 24),
-                _buildRatingSection('Overall Performance', _overallRating, (value) => setState(() => _overallRating = value)),
-                _buildRatingSection('Technical Skills', _technicalRating, (value) => setState(() => _technicalRating = value)),
-                _buildRatingSection('Time Management', _timelinessRating, (value) => setState(() => _timelinessRating = value)),
-                _buildRatingSection('Workshop Communication', _communicationRating, (value) => setState(() => _communicationRating = value)),
-                _buildRatingSection('Safety Compliance', _safetyRating, (value) => setState(() => _safetyRating = value)),
+                _buildRatingSection('Overall Performance', _overallRating,
+                    (value) => setState(() => _overallRating = value)),
+                _buildRatingSection('Work Quality', _qualityRating,
+                    (value) => setState(() => _qualityRating = value)),
+                _buildRatingSection('Timeliness', _timelinessRating,
+                    (value) => setState(() => _timelinessRating = value)),
+                _buildRatingSection('Communication', _communicationRating,
+                    (value) => setState(() => _communicationRating = value)),
+                _buildRatingSection('Safety Standards', _safetyRating,
+                    (value) => setState(() => _safetyRating = value)),
                 const SizedBox(height: 24),
                 _buildCommentsField(),
                 const SizedBox(height: 30),
                 _buildSubmitButton(),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -75,7 +87,7 @@ class _CreateRatingScreenState extends State<CreateRatingScreen> {
     );
   }
 
-  Widget _buildWorkerInfo() {
+  Widget _buildForemanInfo() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -94,10 +106,15 @@ class _CreateRatingScreenState extends State<CreateRatingScreen> {
               ),
               borderRadius: BorderRadius.circular(30),
             ),
-            child: const Icon(
-              Icons.engineering,
-              color: Colors.white,
-              size: 30,
+            child: Center(
+              child: Text(
+                widget.foremanName[0].toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -106,7 +123,7 @@ class _CreateRatingScreenState extends State<CreateRatingScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.workerName,
+                  widget.foremanName,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -115,7 +132,7 @@ class _CreateRatingScreenState extends State<CreateRatingScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Workshop Performance Evaluation',
+                  'Foreman Performance Evaluation',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.white.withOpacity(0.7),
@@ -130,89 +147,159 @@ class _CreateRatingScreenState extends State<CreateRatingScreen> {
   }
 
   Widget _buildProjectNameField() {
-    return TextFormField(
-      controller: _projectNameController,
-      style: const TextStyle(color: Colors.white),
-      decoration: const InputDecoration(
-        labelText: 'Project Name',
-        labelStyle: TextStyle(color: Colors.white70),
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.white30),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.white),
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter project name';
-        }
-        return null;
-      },
+      child: TextFormField(
+        controller: _projectNameController,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          labelText: 'Project Name',
+          labelStyle: TextStyle(color: Colors.white.withOpacity(0.8)),
+          prefixIcon: Icon(Icons.work_outline, color: Colors.white.withOpacity(0.6)),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter the project name';
+          }
+          return null;
+        },
+      ),
     );
   }
 
   Widget _buildRatingSection(String title, int currentValue, Function(int) onChanged) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-        Row(
-          children: List.generate(5, (index) {
-            return IconButton(
-              onPressed: () => onChanged(index + 1),
-              icon: Icon(
-                Icons.star,
-                color: index < currentValue ? Colors.amber : Colors.grey,
-                size: 30,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(5, (index) {
+              return GestureDetector(
+                onTap: () => onChanged(index + 1),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: index < currentValue
+                        ? Colors.amber.withOpacity(0.2)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.star,
+                    color: index < currentValue ? Colors.amber : Colors.white.withOpacity(0.4),
+                    size: 32,
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              '$currentValue out of 5 stars',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 12,
               ),
-            );
-          }),
-        ),
-        const SizedBox(height: 10),
-      ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildCommentsField() {
-    return TextFormField(
-      controller: _commentsController,
-      maxLines: 4,
-      style: const TextStyle(color: Colors.white),
-      decoration: const InputDecoration(
-        labelText: 'Comments',
-        labelStyle: TextStyle(color: Colors.white70),
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.white30),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.white),
-        ),
-        hintText: 'Provide additional feedback...',
-        hintStyle: TextStyle(color: Colors.white30),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please provide comments';
-        }
-        return null;
-      },
+      child: TextFormField(
+        controller: _commentsController,
+        maxLines: 4,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          labelText: 'Comments',
+          labelStyle: TextStyle(color: Colors.white.withOpacity(0.8)),
+          hintText: 'Provide detailed feedback about the foreman\'s performance...',
+          hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+          prefixIcon: Icon(Icons.comment_outlined, color: Colors.white.withOpacity(0.6)),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please provide feedback comments';
+          }
+          return null;
+        },
+      ),
     );
   }
 
   Widget _buildSubmitButton() {
-    return SizedBox(
+    return Container(
       width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFE67E22), Color(0xFFD35400)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: ElevatedButton(
         onPressed: _isSubmitting ? null : _submitRating,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.orange,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 15),
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         child: _isSubmitting
             ? const CircularProgressIndicator(color: Colors.white)
-            : const Text('Submit Rating', style: TextStyle(fontSize: 16)),
+            : const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.rate_review, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text(
+                    'Submit Rating',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -224,16 +311,18 @@ class _CreateRatingScreenState extends State<CreateRatingScreen> {
 
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception('User not authenticated');
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
 
       final rating = Rating(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        workerId: widget.workerId,
-        workerName: widget.workerName,
+        foremanId: widget.foremanId,
+        foremanName: widget.foremanName,
         ownerId: user.uid,
         ownerName: user.displayName ?? user.email ?? 'Unknown',
         overallRating: _overallRating,
-        technicalRating: _technicalRating,
+        qualityRating: _qualityRating,
         timelinessRating: _timelinessRating,
         communicationRating: _communicationRating,
         safetyRating: _safetyRating,
@@ -246,14 +335,20 @@ class _CreateRatingScreenState extends State<CreateRatingScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Rating submitted successfully!')),
+          const SnackBar(
+            content: Text('Rating submitted successfully!'),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
