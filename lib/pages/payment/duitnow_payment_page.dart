@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'payment_success_page.dart';
 
-class DuitNowPaymentPage extends StatelessWidget {
+class DuitNowPaymentPage extends StatefulWidget {
   final String foremenId;
   final String foremenName;
   final double amount;
@@ -16,26 +17,38 @@ class DuitNowPaymentPage extends StatelessWidget {
     required this.currentBalance,
   });
 
+  @override
+  State<DuitNowPaymentPage> createState() => _DuitNowPaymentPageState();
+}
+
+class _DuitNowPaymentPageState extends State<DuitNowPaymentPage> {
+  bool _isProcessing = false;
+
   Future<void> _processPayment(BuildContext context) async {
+    setState(() => _isProcessing = true);
+
     try {
+      // Add artificial delay to simulate payment processing
+      await Future.delayed(const Duration(seconds: 3));
+
       final owner = FirebaseAuth.instance.currentUser;
       final batch = FirebaseFirestore.instance.batch();
       
       // Update foreman's balance
       final foremanRef = FirebaseFirestore.instance
           .collection('users')
-          .doc(foremenId);
-      batch.update(foremanRef, {'currentBalance': currentBalance + amount});
+          .doc(widget.foremenId);
+      batch.update(foremanRef, {'currentBalance': widget.currentBalance + widget.amount});
       
       // Create payment record
       final paymentRef = FirebaseFirestore.instance
           .collection('payments')
           .doc();
       batch.set(paymentRef, {
-        'amount': amount,
+        'amount': widget.amount,
         'timestamp': FieldValue.serverTimestamp(),
-        'foremenId': foremenId,
-        'foremenName': foremenName,
+        'foremenId': widget.foremenId,
+        'foremenName': widget.foremenName,
         'ownerId': owner?.uid,
         'ownerEmail': owner?.email,
         'paymentMethod': 'DuitNow QR',
@@ -50,8 +63,9 @@ class DuitNowPaymentPage extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => PaymentSuccessPage(
-              amount: amount,
-              foremenName: foremenName,
+              amount: widget.amount,
+              foremenName: widget.foremenName,
+              paymentMethod: 'DuitNow QR',
             ),
           ),
         );
@@ -61,6 +75,10 @@ class DuitNowPaymentPage extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error processing payment: $e')),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
       }
     }
   }
@@ -86,7 +104,7 @@ class DuitNowPaymentPage extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        'Payment to: $foremenName',
+                        'Payment to: ${widget.foremenName}',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -94,7 +112,7 @@ class DuitNowPaymentPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Amount: RM ${amount.toStringAsFixed(2)}',
+                        'Amount: RM ${widget.amount.toStringAsFixed(2)}',
                         style: const TextStyle(
                           fontSize: 24,
                           color: Colors.deepOrange,
@@ -143,7 +161,7 @@ class DuitNowPaymentPage extends StatelessWidget {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () => _processPayment(context),
+                  onPressed: _isProcessing ? null : () => _processPayment(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepOrange,
                     foregroundColor: Colors.white,
@@ -151,103 +169,18 @@ class DuitNowPaymentPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text(
-                    'Payment Sent',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: _isProcessing
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          'Payment Sent',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class PaymentSuccessPage extends StatelessWidget {
-  final double amount;
-  final String foremenName;
-
-  const PaymentSuccessPage({
-    super.key,
-    required this.amount,
-    required this.foremenName,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.check_circle,
-                  color: Colors.green,
-                  size: 100,
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Payment Successful!',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'RM ${amount.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepOrange,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'has been sent to $foremenName',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 40),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Navigate back to the owner payment page
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                      // If we're not already on the owner payment page, navigate to it
-                      Navigator.pushReplacementNamed(context, '/home');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      'Done',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),

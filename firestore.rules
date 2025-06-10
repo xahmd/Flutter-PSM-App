@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Owner';
+    }
+    
+    function isForeman() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Foremen';
+    }
+
+    // Users collection rules
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isOwner());
+      allow delete: if isOwner();
+
+      // Saved cards subcollection rules
+      match /saved_cards/{cardId} {
+        allow read: if isAuthenticated() && request.auth.uid == userId;
+        allow create: if isAuthenticated() && request.auth.uid == userId;
+        allow update: if isAuthenticated() && request.auth.uid == userId;
+        allow delete: if isAuthenticated() && request.auth.uid == userId;
+      }
+    }
+
+    // Payments collection rules
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated() && (
+        isOwner() || 
+        (isForeman() && resource.data.foremenId == request.auth.uid)
+      );
+      allow create: if isOwner();
+      allow update: if false; // Payments cannot be modified after creation
+      allow delete: if false; // Payments cannot be deleted
+    }
+  }
+} 
