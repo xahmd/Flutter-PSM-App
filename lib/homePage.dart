@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 // Update rating system import to use the new dashboard
 import 'features/rating/screens/rating_dashboard.dart';
+import 'pages/payment/payment_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,6 +18,11 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _showRatingSection = true;
       });
+    } else if (sectionName == "Payment") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const PaymentPage()),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$sectionName page clicked (to be implemented)')),
