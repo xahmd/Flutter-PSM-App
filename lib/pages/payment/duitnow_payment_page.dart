@@ -8,6 +8,7 @@ class DuitNowPaymentPage extends StatefulWidget {
   final String foremenName;
   final double amount;
   final double currentBalance;
+  final String paymentId;
 
   const DuitNowPaymentPage({
     super.key,
@@ -15,6 +16,7 @@ class DuitNowPaymentPage extends StatefulWidget {
     required this.foremenName,
     required this.amount,
     required this.currentBalance,
+    required this.paymentId,
   });
 
   @override
@@ -38,43 +40,34 @@ class _DuitNowPaymentPageState extends State<DuitNowPaymentPage> {
       final foremanRef = FirebaseFirestore.instance
           .collection('users')
           .doc(widget.foremenId);
-      batch.update(foremanRef, {'currentBalance': widget.currentBalance + widget.amount});
+      batch.update(foremanRef, {'currentBalance': FieldValue.increment(widget.amount)});
       
-      // Create payment record
+      // Update existing payment record
       final paymentRef = FirebaseFirestore.instance
-          .collection('payments')
-          .doc();
-      batch.set(paymentRef, {
-        'amount': widget.amount,
-        'timestamp': FieldValue.serverTimestamp(),
-        'foremenId': widget.foremenId,
-        'foremenName': widget.foremenName,
-        'ownerId': owner?.uid,
-        'ownerEmail': owner?.email,
+          .collection('owner_payments')
+          .doc(widget.paymentId);
+      batch.update(paymentRef, {
+        'status': 'paid',
         'paymentMethod': 'DuitNow QR',
-        'status': 'completed'
       });
       
       await batch.commit();
       
       if (context.mounted) {
-        // Navigate to success page
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PaymentSuccessPage(
-              amount: widget.amount,
-              foremenName: widget.foremenName,
-              paymentMethod: 'DuitNow QR',
-            ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Payment successful!'),
+            backgroundColor: Colors.green,
           ),
         );
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error processing payment: $e')),
         );
+        Navigator.pop(context, false);
       }
     } finally {
       if (mounted) {
@@ -172,12 +165,12 @@ class _DuitNowPaymentPageState extends State<DuitNowPaymentPage> {
                   child: _isProcessing
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
-                          'Payment Sent',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                    'Payment Sent',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ],

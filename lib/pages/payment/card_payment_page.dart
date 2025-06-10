@@ -9,6 +9,7 @@ class CardPaymentPage extends StatefulWidget {
   final String foremenName;
   final double amount;
   final double currentBalance;
+  final String paymentId;
 
   const CardPaymentPage({
     super.key,
@@ -16,6 +17,7 @@ class CardPaymentPage extends StatefulWidget {
     required this.foremenName,
     required this.amount,
     required this.currentBalance,
+    required this.paymentId,
   });
 
   @override
@@ -90,21 +92,15 @@ class _CardPaymentPageState extends State<CardPaymentPage> {
       final foremanRef = FirebaseFirestore.instance
           .collection('users')
           .doc(widget.foremenId);
-      batch.update(foremanRef, {'currentBalance': widget.currentBalance + widget.amount});
+      batch.update(foremanRef, {'currentBalance': FieldValue.increment(widget.amount)});
       
-      // Create payment record
+      // Update existing payment record
       final paymentRef = FirebaseFirestore.instance
-          .collection('payments')
-          .doc();
-      batch.set(paymentRef, {
-        'amount': widget.amount,
-        'timestamp': FieldValue.serverTimestamp(),
-        'foremenId': widget.foremenId,
-        'foremenName': widget.foremenName,
-        'ownerId': owner?.uid,
-        'ownerEmail': owner?.email,
+          .collection('owner_payments')
+          .doc(widget.paymentId);
+      batch.update(paymentRef, {
+        'status': 'paid',
         'paymentMethod': 'Card Payment',
-        'status': 'completed'
       });
 
       // Save card if requested
@@ -127,22 +123,20 @@ class _CardPaymentPageState extends State<CardPaymentPage> {
       await batch.commit();
       
       if (context.mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PaymentSuccessPage(
-              amount: widget.amount,
-              foremenName: widget.foremenName,
-              paymentMethod: 'Card Payment',
-            ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Payment successful!'),
+            backgroundColor: Colors.green,
           ),
         );
+        Navigator.pop(context, true);
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error processing payment: $e')),
         );
+        Navigator.pop(context, false);
       }
     } finally {
       if (mounted) {

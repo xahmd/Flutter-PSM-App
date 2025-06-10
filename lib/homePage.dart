@@ -74,38 +74,38 @@ class _HomePageState extends State<HomePage> {
         children: [
           Expanded(
             child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Welcome to the Home Page!",
-                      style: TextStyle(fontSize: 20),
-                    ),
-                    const SizedBox(height: 30),
-                    const Text(
-                      "Go to Section:",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 20),
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 20,
-                      mainAxisSpacing: 20,
-                      childAspectRatio: 1.2,
-                      children: [
-                        _buildSectionButton(context, "Payment", Icons.payment),
-                        _buildSectionButton(context, "Rating", Icons.star_rate),
-                        _buildSectionButton(context, "Schedule", Icons.calendar_today),
-                        _buildSectionButton(context, "Inventory", Icons.inventory),
-                      ],
-                    ),
-                  ],
-                ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Welcome to the Home Page!",
+                style: TextStyle(fontSize: 20),
               ),
+              const SizedBox(height: 30),
+              const Text(
+                "Go to Section:",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 20,
+                mainAxisSpacing: 20,
+                childAspectRatio: 1.2,
+                children: [
+                  _buildSectionButton(context, "Payment", Icons.payment),
+                  _buildSectionButton(context, "Rating", Icons.star_rate),
+                  _buildSectionButton(context, "Schedule", Icons.calendar_today),
+                  _buildSectionButton(context, "Inventory", Icons.inventory),
+                ],
+              ),
+            ],
+          ),
+        ),
             ),
           ),
           Container(

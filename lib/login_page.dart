@@ -38,9 +38,9 @@ class _LoginPageState extends State<LoginPage> {
       });
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      setState(() {
+        _isLoading = false;
+      });
       }
     }
   }
@@ -118,7 +118,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
         child: SafeArea(
           child: Center(
-            child: SingleChildScrollView(
+        child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
@@ -126,24 +126,24 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     // Logo or App Name
                     Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
                             blurRadius: 10,
                             spreadRadius: 5,
-                          ),
+            ),
                         ],
                       ),
                       child: const Icon(
                         Icons.construction,
                         size: 50,
-                        color: Colors.deepOrange,
-                      ),
+                      color: Colors.deepOrange,
                     ),
+                  ),
                     const SizedBox(height: 30),
                     // Welcome Text
                     const Text(
@@ -182,29 +182,29 @@ class _LoginPageState extends State<LoginPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _buildTextField('Email', _emailController),
-                            _buildTextField('Password', _passwordController,
+                  _buildTextField('Email', _emailController),
+                  _buildTextField('Password', _passwordController,
                                 isPassword: true),
-                            if (_errorMessage.isNotEmpty)
-                              Padding(
+                  if (_errorMessage.isNotEmpty)
+                    Padding(
                                 padding: const EdgeInsets.only(top: 8.0),
-                                child: Text(
-                                  _errorMessage,
+                      child: Text(
+                        _errorMessage,
                                   style: const TextStyle(
                                     color: Colors.red,
                                     fontSize: 14,
                                   ),
-                                ),
-                              ),
+                      ),
+                    ),
                             const SizedBox(height: 24),
-                            ElevatedButton(
-                              onPressed: _isLoading
-                                  ? null
-                                  : () {
-                                      if (_formKey.currentState!.validate()) {
-                                        _loginUser();
-                                      }
-                                    },
+                  ElevatedButton(
+                    onPressed: _isLoading
+                        ? null
+                        : () {
+                            if (_formKey.currentState!.validate()) {
+                              _loginUser();
+                            }
+                          },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.deepOrange,
                                 foregroundColor: Colors.white,
@@ -214,7 +214,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                                 elevation: 0,
                               ),
-                              child: _isLoading
+                    child: _isLoading
                                   ? const SizedBox(
                                       height: 20,
                                       width: 20,
@@ -223,7 +223,7 @@ class _LoginPageState extends State<LoginPage> {
                                         strokeWidth: 2,
                                       ),
                                     )
-                                  : const Text(
+                        : const Text(
                                       'Sign In',
                                       style: TextStyle(
                                         fontSize: 16,
@@ -263,8 +263,8 @@ class _LoginPageState extends State<LoginPage> {
                               decoration: TextDecoration.underline,
                             ),
                           ),
-                        ),
-                      ],
+                  ),
+                ],
                     ),
                   ],
                 ),

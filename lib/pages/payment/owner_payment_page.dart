@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../models/payment_status.dart';
 import 'payment_amount_page.dart';
+import 'card_payment_page.dart';
+import 'duitnow_payment_page.dart';
 
 class OwnerPaymentPage extends StatelessWidget {
   const OwnerPaymentPage({super.key});
@@ -23,24 +27,17 @@ class OwnerPaymentPage extends StatelessWidget {
       text: currentRate?.toString() ?? '',
     );
 
-    await showDialog(
+    return showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Set Hourly Rate for $foremenName'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
+      builder: (context) => AlertDialog(
+        title: const Text('Set Hourly Rate'),
+        content: TextField(
                 controller: rateController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: 'Hourly Rate (RM)',
                   prefixText: 'RM ',
-                  hintText: 'Enter hourly rate',
-                ),
               ),
-            ],
           ),
           actions: [
             TextButton(
@@ -49,26 +46,305 @@ class OwnerPaymentPage extends StatelessWidget {
             ),
             TextButton(
               onPressed: () async {
-                final newRate = double.tryParse(rateController.text);
-                if (newRate != null) {
+              final rate = double.tryParse(rateController.text);
+              if (rate != null && rate > 0) {
                   await FirebaseFirestore.instance
                       .collection('users')
                       .doc(foremenId)
-                      .update({'hourlyRate': newRate});
+                    .update({'hourlyRate': rate});
                   if (context.mounted) {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Hourly rate updated for $foremenName')),
-                    );
-                  }
-                } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a valid rate')),
+                    const SnackBar(content: Text('Hourly rate updated successfully')),
                   );
+                }
                 }
               },
               child: const Text('Save'),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentStatusChip(PaymentStatus status) {
+    Color color;
+    String text;
+
+    switch (status) {
+      case PaymentStatus.initiated:
+        color = Colors.blue;
+        text = 'Initiated';
+        break;
+      case PaymentStatus.pending:
+        color = Colors.orange;
+        text = 'Pending';
+        break;
+      case PaymentStatus.paid:
+        color = Colors.green;
+        text = 'Paid';
+        break;
+      case PaymentStatus.cancelled:
+        color = Colors.red;
+        text = 'Cancelled';
+        break;
+    }
+
+    return Chip(
+      label: Text(
+        text,
+        style: const TextStyle(color: Colors.white),
+      ),
+      backgroundColor: color,
+    );
+  }
+
+  Future<void> _handlePaymentMethod(BuildContext context, PaymentStatusModel payment) async {
+    final result = await showDialog<bool?>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select Payment Method'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.credit_card, color: Colors.deepOrange),
+                title: const Text('Visa/Mastercard'),
+                onTap: () async {
+                  Navigator.pop(context, await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CardPaymentPage(
+                        foremenId: payment.foremenId,
+                        foremenName: payment.foremenName,
+                        amount: payment.amount,
+                        currentBalance: 0.0, // This will be updated in the payment page
+                        paymentId: payment.id,
+                      ),
+                    ),
+                  ));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.account_balance, color: Colors.deepOrange),
+                title: const Text('DuitNow'),
+                onTap: () async {
+                  Navigator.pop(context, await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DuitNowPaymentPage(
+                        foremenId: payment.foremenId,
+                        foremenName: payment.foremenName,
+                        amount: payment.amount,
+                        currentBalance: 0.0, // This will be updated in the payment page
+                        paymentId: payment.id,
+                      ),
+                    ),
+                  ));
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (result == true) {
+      // Payment successful, update status in Firestore
+      await FirebaseFirestore.instance
+          .collection('owner_payments')
+          .doc(payment.id)
+          .update({'status': PaymentStatus.paid.toString().split('.').last});
+    }
+  }
+
+  Future<void> _cancelPayment(BuildContext context, String paymentId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Payment'),
+        content: const Text('Are you sure you want to cancel this payment?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('owner_payments')
+            .doc(paymentId)
+            .update({'status': PaymentStatus.cancelled.toString().split('.').last});
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Payment cancelled successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error cancelling payment: ${e}')),
+          );
+        }
+      }
+    }
+  }
+
+  Widget _buildInitiatedPaymentsSection(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('owner_payments')
+          .where('status', isEqualTo: 'PaymentStatus.initiated')
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          print('Error in initiated payments: ${snapshot.error}');
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final payments = snapshot.data?.docs ?? [];
+        print('Number of initiated payments: ${payments.length}');
+        
+        // Sort payments by timestamp in memory (if orderBy is removed due to index issue)
+        // payments.sort((a, b) {
+        //   final aData = a.data() as Map<String, dynamic>;
+        //   final bData = b.data() as Map<String, dynamic>;
+        //   final aTimestamp = (aData['timestamp'] as Timestamp).toDate();
+        //   final bTimestamp = (bData['timestamp'] as Timestamp).toDate();
+        //   return bTimestamp.compareTo(aTimestamp); // Descending order
+        // });
+
+        if (payments.isEmpty) {
+          print('No initiated payments found');
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: const Text(
+                'Pending Payments',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 200,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: payments.length,
+                itemBuilder: (context, index) {
+                  final payment = payments[index].data() as Map<String, dynamic>;
+                  print('Payment data: $payment');
+                  final paymentModel = PaymentStatusModel.fromMap(
+                    payments[index].id,
+                    payment,
+                  );
+
+                  return Container(
+                    width: 300,
+                    margin: const EdgeInsets.only(left: 16, right: 8),
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: Colors.deepOrange.shade50,
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: Colors.deepOrange,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    paymentModel.foremenName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Amount: RM ${paymentModel.amount.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.deepOrange,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Date: ${paymentModel.timestamp?.day ?? '--'}/${paymentModel.timestamp?.month ?? '--'}/${paymentModel.timestamp?.year ?? '----'}',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const Spacer(),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () => _handlePaymentMethod(context, paymentModel),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.deepOrange,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Pay Now'),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () => _cancelPayment(context, paymentModel.id),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.red,
+                                      side: const BorderSide(color: Colors.red),
+                                    ),
+                                    child: const Text('Cancel'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const Divider(height: 32),
           ],
         );
       },
@@ -100,7 +376,7 @@ class OwnerPaymentPage extends StatelessWidget {
                   const Icon(Icons.history, color: Colors.white),
                   const SizedBox(width: 8),
                   Text(
-                    'Payment History - $foremenName',
+                    'Payment History - ${foremenName}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -113,7 +389,7 @@ class OwnerPaymentPage extends StatelessWidget {
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
-                    .collection('payments')
+                    .collection('owner_payments')
                     .where('foremenId', isEqualTo: foremenId)
                     .orderBy('timestamp', descending: true)
                     .snapshots(),
@@ -138,72 +414,63 @@ class OwnerPaymentPage extends StatelessWidget {
                   }
 
                   return ListView.builder(
-                    controller: scrollController,
-                    padding: const EdgeInsets.all(16),
                     itemCount: payments.length,
                     itemBuilder: (context, index) {
                       final payment = payments[index].data() as Map<String, dynamic>;
-                      final amount = (payment['amount'] as num).toDouble();
-                      final timestamp = (payment['timestamp'] as Timestamp).toDate();
-                      final paymentMethod = payment['paymentMethod'] as String;
+                      final paymentModel = PaymentStatusModel.fromMap(
+                        payments[index].id,
+                        payment,
+                      );
 
                       return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.deepOrange.shade50,
+                            child: Icon(
+                              paymentModel.paymentMethod == 'DuitNow QR'
+                                  ? Icons.qr_code
+                                  : Icons.credit_card,
+                              color: Colors.deepOrange,
+                            ),
+                          ),
+                          title: Text(
+                            'RM ${paymentModel.amount.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'RM ${amount.toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.deepOrange,
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green.shade50,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      paymentMethod,
-                                      style: TextStyle(
-                                        color: Colors.green.shade700,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                '${paymentModel.timestamp?.day ?? '--'}/${paymentModel.timestamp?.month ?? '--'}/${paymentModel.timestamp?.year ?? '----'}',
+                                style: const TextStyle(fontSize: 12),
                               ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${timestamp.day}/${timestamp.month}/${timestamp.year}',
-                                    style: const TextStyle(color: Colors.grey),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}',
-                                    style: const TextStyle(color: Colors.grey),
-                                  ),
-                                ],
-                              ),
+                              const SizedBox(height: 4),
+                              _buildPaymentStatusChip(paymentModel.status),
                             ],
                           ),
+                          trailing: paymentModel.status == PaymentStatus.initiated || paymentModel.status == PaymentStatus.pending
+                              ? ElevatedButton(
+                                  onPressed: () => _cancelPayment(context, paymentModel.id),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: const Text('Cancel'),
+                                )
+                              : Text(
+                                  paymentModel.paymentMethod ?? 'N/A',
+                                  style: const TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                          isThreeLine: true,
                         ),
                       );
                     },
@@ -406,6 +673,7 @@ class OwnerPaymentPage extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildInitiatedPaymentsSection(context),
           Container(
             padding: const EdgeInsets.all(16),
             child: const Text(
@@ -466,6 +734,7 @@ class OwnerPaymentPage extends StatelessWidget {
                                   style: const TextStyle(
                                     color: Colors.deepOrange,
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 13,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -473,6 +742,7 @@ class OwnerPaymentPage extends StatelessWidget {
                                   'Hourly Rate: ${foremanData['hourlyRate'] != null ? 'RM ${(foremanData['hourlyRate'] as num).toStringAsFixed(2)}' : 'Not set'}',
                                   style: TextStyle(
                                     color: foremanData['hourlyRate'] != null ? Colors.black87 : Colors.grey,
+                                    fontSize: 13,
                                   ),
                                 ),
                               ],
@@ -513,16 +783,16 @@ class OwnerPaymentPage extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: OutlinedButton.icon(
-                                    onPressed: () => _handleHourlyRate(
-                                      context,
-                                      foreman.id,
-                                      foremanName,
-                                      foremanData['hourlyRate'] as double?,
-                                    ),
-                                    icon: const Icon(Icons.edit),
-                                    label: const Text('Set Rate'),
+                                  onPressed: () => _handleHourlyRate(
+                                    context,
+                                    foreman.id,
+                                    foremanName,
+                                    foremanData['hourlyRate'] as double?,
+                                  ),
+                                  icon: const Icon(Icons.edit),
+                                  label: const Text('Set Rate'),
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.deepOrange,
+                                    foregroundColor: Colors.deepOrange,
                                       side: const BorderSide(color: Colors.deepOrange),
                                     ),
                                   ),
@@ -530,17 +800,17 @@ class OwnerPaymentPage extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: ElevatedButton.icon(
-                                    onPressed: () => _handlePayment(
-                                      context,
-                                      foreman.id,
-                                      foremanName,
-                                      currentBalance,
-                                    ),
-                                    icon: const Icon(Icons.payment),
-                                    label: const Text('Pay'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.deepOrange,
-                                      foregroundColor: Colors.white,
+                                  onPressed: () => _handlePayment(
+                                    context,
+                                    foreman.id,
+                                    foremanName,
+                                    currentBalance,
+                                  ),
+                                  icon: const Icon(Icons.payment),
+                                    label: const Text('New Payment'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.deepOrange,
+                                    foregroundColor: Colors.white,
                                     ),
                                   ),
                                 ),

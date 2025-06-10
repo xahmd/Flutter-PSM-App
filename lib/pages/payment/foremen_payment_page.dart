@@ -1,12 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../models/payment_status.dart';
 
 class ForemenPaymentPage extends StatelessWidget {
   const ForemenPaymentPage({super.key});
 
-  String _formatDate(DateTime date) {
+  String _formatDate(DateTime? date) {
+    if (date == null) {
+      return '--/--/---- --:--'; // Placeholder for null timestamp
+    }
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildPaymentStatusChip(PaymentStatus status) {
+    Color color;
+    String text;
+
+    switch (status) {
+      case PaymentStatus.initiated:
+        color = Colors.blue;
+        text = 'Initiated';
+        break;
+      case PaymentStatus.pending:
+        color = Colors.amber;
+        text = 'Pending';
+        break;
+      case PaymentStatus.paid:
+        color = Colors.green;
+        text = 'Paid';
+        break;
+      case PaymentStatus.cancelled:
+        color = Colors.red;
+        text = 'Cancelled';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
+    );
   }
 
   @override
@@ -103,7 +148,7 @@ class ForemenPaymentPage extends StatelessWidget {
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance
-                      .collection('payments')
+                      .collection('owner_payments')
                       .where('foremenId', isEqualTo: currentUser.uid)
                       .orderBy('timestamp', descending: true)
                       .snapshots(),
@@ -131,10 +176,22 @@ class ForemenPaymentPage extends StatelessWidget {
                       itemCount: payments.length,
                       itemBuilder: (context, index) {
                         final payment = payments[index].data() as Map<String, dynamic>;
-                        final amount = (payment['amount'] as num).toDouble();
-                        final timestamp = (payment['timestamp'] as Timestamp).toDate();
-                        final paymentMethod = payment['paymentMethod'] as String;
+                        final amount = payment['amount'] as double;
+                        final status = payment['status'] as String;
+                        final timestamp = payment['timestamp'] as Timestamp?;
+                        final ownerName = payment['ownerName'] as String? ?? 'Unknown Owner';
                         final ownerEmail = payment['ownerEmail'] as String?;
+
+                        PaymentStatus paymentStatus;
+                        if (status.contains('paid')) {
+                            paymentStatus = PaymentStatus.paid;
+                        } else if (status.contains('cancelled')) {
+                            paymentStatus = PaymentStatus.cancelled;
+                        } else if (status.contains('initiated')) {
+                            paymentStatus = PaymentStatus.initiated;
+                        } else {
+                            paymentStatus = PaymentStatus.pending;
+                        }
 
                         return Card(
                           margin: const EdgeInsets.symmetric(
@@ -143,12 +200,28 @@ class ForemenPaymentPage extends StatelessWidget {
                           ),
                           child: ListTile(
                             leading: CircleAvatar(
-                              backgroundColor: Colors.deepOrange.shade50,
+                              backgroundColor: paymentStatus == PaymentStatus.paid
+                                  ? Colors.green.shade50
+                                  : paymentStatus == PaymentStatus.initiated
+                                      ? Colors.blue.shade50
+                                      : paymentStatus == PaymentStatus.cancelled
+                                          ? Colors.red.shade50
+                                          : Colors.amber.shade50,
                               child: Icon(
-                                paymentMethod == 'DuitNow QR' 
-                                    ? Icons.qr_code 
-                                    : Icons.credit_card,
-                                color: Colors.deepOrange,
+                                paymentStatus == PaymentStatus.paid
+                                    ? Icons.check_circle
+                                    : paymentStatus == PaymentStatus.initiated
+                                        ? Icons.pending_actions
+                                        : paymentStatus == PaymentStatus.cancelled
+                                            ? Icons.cancel
+                                            : Icons.payment,
+                                color: paymentStatus == PaymentStatus.paid
+                                    ? Colors.green
+                                    : paymentStatus == PaymentStatus.initiated
+                                        ? Colors.blue
+                                        : paymentStatus == PaymentStatus.cancelled
+                                            ? Colors.red
+                                            : Colors.amber,
                               ),
                             ),
                             title: Text(
@@ -161,24 +234,21 @@ class ForemenPaymentPage extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  _formatDate(timestamp),
+                                  _formatDate(timestamp?.toDate()),
                                   style: const TextStyle(fontSize: 12),
                                 ),
-                                if (ownerEmail != null)
+                                const SizedBox(height: 4),
+                                _buildPaymentStatusChip(paymentStatus),
+                                if (ownerEmail != null) ...[
+                                  const SizedBox(height: 4),
                                   Text(
                                     'From: $ownerEmail',
                                     style: const TextStyle(fontSize: 12),
                                   ),
+                                ],
                               ],
                             ),
-                            trailing: Text(
-                              paymentMethod,
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 12,
-                              ),
-                            ),
-                            isThreeLine: ownerEmail != null,
+                            isThreeLine: true,
                           ),
                         );
                       },
@@ -198,7 +268,7 @@ class ForemenPaymentPage extends StatelessWidget {
                 ),
                 child: StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance
-                      .collection('payments')
+                      .collection('owner_payments')
                       .where('foremenId', isEqualTo: currentUser.uid)
                       .snapshots(),
                   builder: (context, snapshot) {
@@ -208,9 +278,18 @@ class ForemenPaymentPage extends StatelessWidget {
 
                     final payments = snapshot.data?.docs ?? [];
                     final totalPayments = payments.length;
+                    
+                    // Calculate total received from paid payments only
                     final totalAmount = payments.fold<double>(
                       0,
-                      (sum, payment) => sum + ((payment.data() as Map<String, dynamic>)['amount'] as num).toDouble(),
+                      (sum, payment) {
+                        final paymentData = payment.data() as Map<String, dynamic>;
+                        final status = paymentData['status'] as String;
+                        if (status.contains('paid')) {
+                          return sum + (paymentData['amount'] as num).toDouble();
+                        }
+                        return sum;
+                      },
                     );
 
                     return Row(

@@ -63,7 +63,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
               backgroundColor: Colors.green,
             ),
           );
-          Navigator.pushReplacementNamed(context, '/login');
+        Navigator.pushReplacementNamed(context, '/login');
         }
       } on FirebaseAuthException catch (e) {
         String message = 'An error occurred';
@@ -75,21 +75,21 @@ class _RegistrationFormState extends State<RegistrationForm> {
           message = 'The email address is not valid.';
         }
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(message),
               backgroundColor: Colors.red,
             ),
-          );
+        );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('An error occurred during registration'),
               backgroundColor: Colors.red,
-            ),
-          );
+                ),
+            );
         }
       } finally {
         if (mounted) {
@@ -119,9 +119,9 @@ class _RegistrationFormState extends State<RegistrationForm> {
           child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
-              child: Column(
+        child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+          children: [
                   const SizedBox(height: 40),
                   // Logo and Welcome Text
                   Center(
@@ -137,14 +137,14 @@ class _RegistrationFormState extends State<RegistrationForm> {
                             spreadRadius: 5,
                           ),
                         ],
-                      ),
+              ),
                       child: const Icon(
                         Icons.person_add,
                         size: 40,
                         color: Colors.deepOrange,
-                      ),
-                    ),
-                  ),
+                ),
+              ),
+            ),
                   const SizedBox(height: 24),
                   const Text(
                     'Create Account',
@@ -179,13 +179,13 @@ class _RegistrationFormState extends State<RegistrationForm> {
                         ),
                       ],
                     ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TextFormField(
-                            controller: _nameController,
+                    children: [
+                      TextFormField(
+                        controller: _nameController,
                             decoration: InputDecoration(
                               labelText: 'Full Name',
                               prefixIcon: const Icon(Icons.person_outline, color: Colors.deepOrange),
@@ -197,28 +197,28 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                 borderSide: const BorderSide(color: Colors.deepOrange),
                               ),
                             ),
-                            validator: (value) => value!.isEmpty ? 'Enter your name' : null,
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
+                        validator: (value) => value!.isEmpty ? 'Enter your name' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
                             controller: _emailController,
                             decoration: InputDecoration(
                               labelText: 'Email',
                               prefixIcon: const Icon(Icons.email_outlined, color: Colors.deepOrange),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                              ),
+                      ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(color: Colors.deepOrange),
                               ),
                             ),
-                            keyboardType: TextInputType.emailAddress,
+                        keyboardType: TextInputType.emailAddress,
                             validator: (value) => !value!.contains('@') ? 'Enter a valid email' : null,
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _phoneController,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _phoneController,
                             decoration: InputDecoration(
                               labelText: 'Phone Number',
                               prefixIcon: const Icon(Icons.phone_outlined, color: Colors.deepOrange),
@@ -230,9 +230,9 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                 borderSide: const BorderSide(color: Colors.deepOrange),
                               ),
                             ),
-                            keyboardType: TextInputType.phone,
-                            validator: (value) => value!.isEmpty ? 'Enter phone number' : null,
-                          ),
+                        keyboardType: TextInputType.phone,
+                        validator: (value) => value!.isEmpty ? 'Enter phone number' : null,
+                      ),
                           const SizedBox(height: 16),
                           TextFormField(
                             controller: _passwordController,
@@ -261,7 +261,7 @@ class _RegistrationFormState extends State<RegistrationForm> {
                             obscureText: _obscurePassword,
                             validator: (value) => value!.length < 6 ? 'Password too short' : null,
                           ),
-                          const SizedBox(height: 24),
+                      const SizedBox(height: 24),
                           // Gender Selection
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,10 +272,10 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
-                              ),
+                        ),
                               const SizedBox(height: 8),
                               Row(
-                                children: [
+                          children: [
                                   Expanded(
                                     child: RadioListTile<String>(
                                       title: const Text('Male'),
@@ -293,14 +293,14 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                     child: RadioListTile<String>(
                                       title: const Text('Female'),
                                       value: 'Female',
-                                      groupValue: _gender,
+                              groupValue: _gender,
                                       activeColor: Colors.deepOrange,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _gender = value!;
-                                        });
-                                      },
-                                    ),
+                              onChanged: (value) {
+                                setState(() {
+                                  _gender = value!;
+                                });
+                              },
+                            ),
                                   ),
                                 ],
                               ),
@@ -325,14 +325,14 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                     child: RadioListTile<String>(
                                       title: const Text('Owner'),
                                       value: 'Owner',
-                                      groupValue: _role,
+                              groupValue: _role,
                                       activeColor: Colors.deepOrange,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _role = value!;
-                                        });
-                                      },
-                                    ),
+                              onChanged: (value) {
+                                setState(() {
+                                  _role = value!;
+                                });
+                              },
+                            ),
                                   ),
                                   Expanded(
                                     child: RadioListTile<String>(
@@ -355,14 +355,14 @@ class _RegistrationFormState extends State<RegistrationForm> {
                           // Create Account Button
                           ElevatedButton(
                             onPressed: _isLoading ? null : _submitForm,
-                            style: ElevatedButton.styleFrom(
+                                style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.deepOrange,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
+                                  shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
+                                  ),
+                                ),
                             child: _isLoading
                                 ? const SizedBox(
                                     height: 20,
@@ -373,17 +373,17 @@ class _RegistrationFormState extends State<RegistrationForm> {
                                     ),
                                   )
                                 : const Text(
-                                    'Create Account',
+                                  'Create Account',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
-                                  ),
+                                ),
                           ),
                         ],
-                      ),
-                    ),
-                  ),
+                              ),
+                            ),
+                          ),
                   const SizedBox(height: 24),
                   // Sign In Link
                   Row(
@@ -394,33 +394,34 @@ class _RegistrationFormState extends State<RegistrationForm> {
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 14,
-                        ),
-                      ),
+                                  ),
+                                ),
                       TextButton(
-                        onPressed: () {
+                                onPressed: () {
                           Navigator.pushReplacementNamed(context, '/login');
-                        },
+                                },
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),
-                        child: const Text(
-                          'Sign In',
+                                child: const Text(
+                                  'Sign In',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                             decoration: TextDecoration.underline,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
         ),
       ),
     );
   }
 }
+
