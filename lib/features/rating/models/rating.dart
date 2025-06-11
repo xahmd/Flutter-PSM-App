@@ -64,11 +64,11 @@ class Rating {
         // Handle milliseconds since epoch
         return DateTime.fromMillisecondsSinceEpoch(dateValue);
       } else {
-        print('🔥 Unknown date format: $dateValue (${dateValue.runtimeType})');
+        print('Unknown date format: $dateValue (${dateValue.runtimeType})');
         return DateTime.now();
       }
     } catch (e) {
-      print('🔥 Error parsing date $dateValue: $e');
+      print(' Error parsing date $dateValue: $e');
       return DateTime.now();
     }
   }
