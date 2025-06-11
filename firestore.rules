@@ -2,46 +2,137 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
+
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isOwner() {
-      return isAuthenticated() && 
+      return isAuthenticated() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Owner';
     }
-    
+
     function isForeman() {
-      return isAuthenticated() && 
+      return isAuthenticated() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Foremen';
     }
 
-    // Users collection rules
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && (request.auth.uid == userId || isOwner());
       allow delete: if isOwner();
 
-      // Saved cards subcollection rules
+      match /myForemen/{foremanId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
       match /saved_cards/{cardId} {
-        allow read: if isAuthenticated() && request.auth.uid == userId;
-        allow create: if isAuthenticated() && request.auth.uid == userId;
-        allow update: if isAuthenticated() && request.auth.uid == userId;
-        allow delete: if isAuthenticated() && request.auth.uid == userId;
+        allow read, create, update, delete: if request.auth.uid == userId;
       }
     }
 
-    // Payments collection rules
     match /payments/{paymentId} {
+      allow read: if isOwner() || (isForeman() && resource.data.foremenId == request.auth.uid);
+      allow create: if isOwner() || isForeman();
+      allow update: if isOwner() || (isForeman() && resource.data.foremenId == request.auth.uid);
+      allow delete: if isOwner();
+    }
+
+    match /owner_payments/{paymentId} {
+      allow read: if isOwner() || (isForeman() && resource.data.foremenId == request.auth.uid);
+      allow create: if isOwner();
+      allow update: if isOwner() && request.auth.uid == resource.data.ownerId;
+      allow delete: if false;
+    }
+
+    match /inventory/{itemId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /marketplace_items/{docId} {
+      allow read: if isAuthenticated();
+    }
+
+    // ✅ Allow ONLY Owners to access incoming_requests
+    match /incoming_requests/{docId} {
+      allow read, write: if isOwner();
+    }
+
+    // Ratings collection rules
+    match /ratings/{ratingId} {
+      // Allow foremen to read their own ratings
+      allow read: if isForeman() && resource.data.foremanId == request.auth.uid;
+      
+      // Allow owners to read all ratings and create new ones
+      allow read, create: if isOwner();
+      
+      // No updates or deletes allowed
+      allow update, delete: if false;
+    }
+
+    // Helper functions for schedule validation
+    function isValidBusinessHours(timeValue) {
+      let hour = timeValue.toDate().getHours();
+      return hour >= 8 && hour <= 20;
+    }
+
+    function isValidScheduleDuration(startTimeValue, endTimeValue) {
+      let timeDiff = endTimeValue.toDate().getTime() - startTimeValue.toDate().getTime();
+      let minTime = 30 * 60 * 1000; // 30 minutes in milliseconds
+      let maxTime = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+      return timeDiff >= minTime && timeDiff <= maxTime;
+    }
+
+    function isNotPastDate(timeValue) {
+      return timeValue.toDate() > request.time.toDate();
+    }
+
+    function hasNoOverlappingSchedules(startTimeValue, endTimeValue, foremanId) {
+      let bufferTime = 15 * 60 * 1000; // 15 minutes in milliseconds
+      let bufferStart = startTimeValue.toDate().getTime() - bufferTime;
+      let bufferEnd = endTimeValue.toDate().getTime() + bufferTime;
+      
+      let existingSchedules = getAfter(/databases/$(database)/documents/schedules)
+        .where(foremanId == request.resource.data.foremanId)
+        .where(startTimeValue <= bufferEnd)
+        .where(endTimeValue >= bufferStart);
+      
+      return existingSchedules.size() == 0;
+    }
+
+    // Schedule management rules
+    match /schedules/{scheduleId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isForeman() && request.resource.data.foremanId == request.auth.uid;
+      allow delete: if isForeman() && resource.data.foremanId == request.auth.uid;
+    }
+
+    // Available slots rules
+    match /available_slots/{slotId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isForeman() && request.resource.data.foremanId == request.auth.uid;
+      allow delete: if isForeman() && resource.data.foremanId == request.auth.uid;
+    }
+
+    // Foreman schedules rules
+    match /foreman_schedules/{scheduleId} {
       allow read: if isAuthenticated() && (
         isOwner() || 
-        (isForeman() && resource.data.foremenId == request.auth.uid)
+        (isForeman() && resource.data.foremanId == request.auth.uid)
       );
-      allow create: if isOwner();
-      allow update: if false; // Payments cannot be modified after creation
-      allow delete: if false; // Payments cannot be deleted
+      allow create: if isAuthenticated() && (
+        isOwner() || 
+        (isForeman() && request.resource.data.foremanId == request.auth.uid)
+      );
+      allow update: if isAuthenticated() && (
+        isOwner() || 
+        (isForeman() && resource.data.foremanId == request.auth.uid)
+      );
+      allow delete: if isAuthenticated() && (
+        isOwner() || 
+        (isForeman() && resource.data.foremanId == request.auth.uid)
+      );
     }
   }
-} 
+}
