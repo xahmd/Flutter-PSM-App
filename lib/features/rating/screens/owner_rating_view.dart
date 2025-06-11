@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
-import '../../../firebase_options.dart';
 import '../models/rating.dart';
 import '../services/rating_service.dart';
 import 'create_rating_screen.dart';
@@ -47,7 +44,7 @@ class _OwnerRatingViewState extends State<OwnerRatingView>
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF2C3E50), Color(0xFF3498DB), Color(0xFF9B59B6)],
+          colors: [Color(0xFFFF6B35), Color(0xFFFF8F65), Color(0xFFFFB085)],
           stops: [0.0, 0.5, 1.0],
         ),
       ),
@@ -364,7 +361,7 @@ class _OwnerRatingViewState extends State<OwnerRatingView>
           child: _buildActionButton(
             'View All Ratings',
             Icons.list,
-            const Color(0xFF4CAF50),
+            const Color(0xFFD35400),
             () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const AllRatingsScreen()),
@@ -376,7 +373,7 @@ class _OwnerRatingViewState extends State<OwnerRatingView>
           child: _buildActionButton(
             'Analytics',
             Icons.analytics,
-            const Color(0xFF2196F3),
+            const Color(0xFFD35400),
             () => _showAnalytics(),
           ),
         ),

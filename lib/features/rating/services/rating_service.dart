@@ -81,7 +81,6 @@ class RatingService {
 
   // Get ratings for a specific foreman with local cache fallback
   Stream<List<Rating>> getForemanRatings(String foremanId) {
-    print('🔥🔥🔥 GETTING RATINGS FOR FOREMAN: $foremanId');
 
     // Create a stream controller to handle both Firebase and local cache
     late StreamController<List<Rating>> controller;
@@ -112,11 +111,11 @@ class RatingService {
                     final rating = Rating.fromJson(ratingData);
                     ratings.add(rating);
                     print(
-                      '🔥 Successfully parsed Firestore rating: ${rating.id} for foreman ${rating.foremanId}',
+                      'Successfully parsed Firestore rating: ${rating.id} for foreman ${rating.foremanId}',
                     );
                   } catch (e) {
-                    print('🔥 Error parsing Firestore rating ${doc.id}: $e');
-                    print('🔥 Raw data was: ${doc.data()}');
+                    print(' Error parsing Firestore rating ${doc.id}: $e');
+                    print(' Raw data was: ${doc.data()}');
                   }
                 }
 
@@ -129,22 +128,22 @@ class RatingService {
                 if (localRatings.isNotEmpty) {
                   ratings.addAll(localRatings);
                   print(
-                    '🔥 Added ${localRatings.length} ratings from local cache',
+                    'Added ${localRatings.length} ratings from local cache',
                   );
                 }
 
                 // Sort by creation date
                 ratings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-                print('🔥 Final processed ratings: ${ratings.length}');
-                print('🔥 Ratings IDs: ${ratings.map((r) => r.id).toList()}');
+                print('Final processed ratings: ${ratings.length}');
+                print('Ratings IDs: ${ratings.map((r) => r.id).toList()}');
 
                 if (!controller.isClosed) {
                   controller.add(ratings);
                 }
               },
               onError: (error) {
-                print('🔥 Firestore stream error: $error');
+                print('Firestore stream error: $error');
 
                 // Return local cache only when Firebase fails
                 final localRatings =
@@ -155,7 +154,7 @@ class RatingService {
                 localRatings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
                 print(
-                  '🔥 Returning ${localRatings.length} ratings from local cache only',
+                  'Returning ${localRatings.length} ratings from local cache only',
                 );
 
                 if (!controller.isClosed) {
@@ -174,14 +173,14 @@ class RatingService {
 
   // Get all ratings with local cache fallback (for View All Ratings screen)
   Stream<List<Rating>> getAllRatings() {
-    print('🔥🔥🔥 GETTING ALL RATINGS 🔥🔥🔥');
+    print('GETTING ALL RATINGS ');
 
     // Create a stream controller to handle both Firebase and local cache
     late StreamController<List<Rating>> controller;
 
     controller = StreamController<List<Rating>>(
       onListen: () {
-        print('🔥 All ratings stream listener attached');
+        print('All ratings stream listener attached');
 
         // Try Firestore first
         _firestore
@@ -190,7 +189,7 @@ class RatingService {
             .listen(
               (QuerySnapshot snapshot) {
                 print(
-                  '🔥 Firestore all ratings snapshot: ${snapshot.docs.length} docs',
+                  'Firestore all ratings snapshot: ${snapshot.docs.length} docs',
                 );
 
                 List<Rating> ratings = [];
@@ -199,29 +198,29 @@ class RatingService {
                 for (var doc in snapshot.docs) {
                   try {
                     final ratingData = doc.data() as Map<String, dynamic>;
-                    print('🔥 Processing rating doc: ${doc.id}');
+                    print(' Processing rating doc: ${doc.id}');
 
                     final rating = Rating.fromJson(ratingData);
                     ratings.add(rating);
-                    print('🔥 Successfully parsed rating: ${rating.id}');
+                    print(' Successfully parsed rating: ${rating.id}');
                   } catch (e) {
-                    print('🔥 Error parsing Firestore rating ${doc.id}: $e');
-                    print('🔥 Raw data: ${doc.data()}');
+                    print('Error parsing Firestore rating ${doc.id}: $e');
+                    print('Raw data: ${doc.data()}');
                   }
                 }
 
                 // Add local cache ratings
                 ratings.addAll(_localRatingsCache.values);
                 print(
-                  '🔥 Added ${_localRatingsCache.length} ratings from local cache',
+                  'Added ${_localRatingsCache.length} ratings from local cache',
                 );
 
                 // Sort by creation date
                 ratings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-                print('🔥 Total ratings to return: ${ratings.length}');
+                print('Total ratings to return: ${ratings.length}');
                 print(
-                  '🔥 Sample rating IDs: ${ratings.take(5).map((r) => r.id).toList()}',
+                  'Sample rating IDs: ${ratings.take(5).map((r) => r.id).toList()}',
                 );
 
                 if (!controller.isClosed) {
@@ -229,11 +228,11 @@ class RatingService {
                 }
               },
               onError: (error) {
-                print('🔥 Firestore all ratings error: $error');
+                print('Firestore all ratings error: $error');
 
                 // If cache is empty and Firebase failed, populate with sample data
                 if (_localRatingsCache.isEmpty) {
-                  print('🔥 Cache is empty, populating with sample data...');
+                  print('Cache is empty, populating with sample data...');
                   populateCacheWithSampleData();
                 }
 
@@ -242,7 +241,7 @@ class RatingService {
                 ratings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
                 print(
-                  '🔥 Returning ${ratings.length} ratings from local cache only',
+                  'Returning ${ratings.length} ratings from local cache only',
                 );
 
                 if (!controller.isClosed) {
@@ -305,21 +304,21 @@ class RatingService {
 
       // TRY FIRESTORE FIRST (Primary method)
       try {
-        print('🔥 Attempting to read role from Firestore users collection...');
+        print('Attempting to read role from Firestore users collection...');
         final userDoc =
             await _firestore.collection(_usersCollection).doc(userId).get();
 
         if (userDoc.exists) {
           final data = userDoc.data();
-          print('🔥 Firebase user data: $data');
+          print('Firebase user data: $data');
 
           final roleFromFirebase =
               data?['role']?.toString().toLowerCase() ?? '';
-          print('🔥 Role from Firebase: "$roleFromFirebase"');
+          print('Role from Firebase: "$roleFromFirebase"');
 
           if (roleFromFirebase == 'owner' || roleFromFirebase == 'owners') {
             detectedRole = 'owner';
-            print('🎭 ✅ DETECTED AS OWNER from Firebase database');
+            print(' ✅ DETECTED AS OWNER from Firebase database');
           } else if (roleFromFirebase == 'foreman' ||
               roleFromFirebase == 'foremen') {
             detectedRole = 'foreman';
@@ -368,7 +367,7 @@ class RatingService {
 
       return detectedRole;
     } catch (e) {
-      print('🔥 Error getting user role: $e');
+      print('Error getting user role: $e');
       return 'foreman'; // Safe fallback
     }
   }
@@ -392,13 +391,13 @@ class RatingService {
 
   // Get list of foremen with better error handling
   Stream<List<Map<String, dynamic>>> getForemen() {
-    print('🔥🔥🔥 GETTING FOREMEN FROM FIRESTORE DATABASE 🔥🔥🔥');
+    print('GETTING FOREMEN FROM FIRESTORE DATABASE');
 
     return _firestore
         .collection(_usersCollection)
         .snapshots()
         .map((QuerySnapshot snapshot) {
-          print('🔥 Found ${snapshot.docs.length} total users in database');
+          print('Found ${snapshot.docs.length} total users in database');
 
           final foremen =
               snapshot.docs
@@ -509,9 +508,9 @@ class RatingService {
   // Force add a test rating to cache (for debugging)
   void addTestRatingToCache(String foremanId) {
     final testRating = Rating(
-      id: 'test-${DateTime.now().millisecondsSinceEpoch}',
+      id: '${DateTime.now().millisecondsSinceEpoch}',
       foremanId: foremanId,
-      foremanName: 'Test Foreman',
+      foremanName: _ratingsCollection,
       ownerId: 'test-owner',
       ownerName: 'Test Owner',
       overallRating: 5,
