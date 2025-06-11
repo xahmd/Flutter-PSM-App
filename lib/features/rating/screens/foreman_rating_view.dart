@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import '../../../firebase_options.dart';
 import '../models/rating.dart';
 import '../services/rating_service.dart';
 
@@ -15,7 +17,7 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
     with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  final RatingService _ratingService = RatingService();
+  final RatingService _ratingService = RatingService(); // Now uses singleton
 
   @override
   void initState() {
@@ -50,11 +52,7 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF1B4332),
-            Color(0xFF2D6A4F),
-            Color(0xFF40916C),
-          ],
+          colors: [Color(0xFF1B4332), Color(0xFF2D6A4F), Color(0xFF40916C)],
           stops: [0.0, 0.5, 1.0],
         ),
       ),
@@ -92,11 +90,7 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withOpacity(0.3)),
           ),
-          child: const Icon(
-            Icons.engineering,
-            size: 50,
-            color: Colors.white,
-          ),
+          child: const Icon(Icons.engineering, size: 50, color: Colors.white),
         ),
         const SizedBox(height: 20),
         const Text(
@@ -127,29 +121,43 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
       builder: (context, snapshot) {
         final ratings = snapshot.data ?? [];
         final totalRatings = ratings.length;
-        final avgRating = ratings.isEmpty
-            ? 0.0
-            : ratings
-                    .map((r) => r.averageRating)
-                    .reduce((a, b) => a + b) /
-                totalRatings;
-        final recentRatings = ratings
-            .where((r) => DateTime.now().difference(r.createdAt).inDays <= 30)
-            .length;
+        final avgRating =
+            ratings.isEmpty
+                ? 0.0
+                : ratings.map((r) => r.averageRating).reduce((a, b) => a + b) /
+                    totalRatings;
+        final recentRatings =
+            ratings
+                .where(
+                  (r) => DateTime.now().difference(r.createdAt).inDays <= 30,
+                )
+                .length;
 
         return Row(
           children: [
             Expanded(
-                child: _buildStatCard(
-                    'Total Ratings', totalRatings.toString(), Icons.rate_review)),
+              child: _buildStatCard(
+                'Total Ratings',
+                totalRatings.toString(),
+                Icons.rate_review,
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
-                child: _buildStatCard(
-                    'Avg Rating', avgRating.toStringAsFixed(1), Icons.star)),
+              child: _buildStatCard(
+                'Avg Rating',
+                avgRating.toStringAsFixed(1),
+                Icons.star,
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
-                child: _buildStatCard(
-                    'This Month', recentRatings.toString(), Icons.calendar_month)),
+              child: _buildStatCard(
+                'This Month',
+                recentRatings.toString(),
+                Icons.calendar_month,
+              ),
+            ),
           ],
         );
       },
@@ -197,35 +205,77 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
   }
 
   Widget _buildRatingsHistory(String foremanId) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('ratings')
-          .where('foremanId', isEqualTo: foremanId)
-          .orderBy('createdAt', descending: true)
-          .snapshots(),
-      builder: (context, snapshot) {        
+    print('🔥 Building ratings history for foreman: $foremanId');
+    _ratingService.debugLocalCache();
+
+    return StreamBuilder<List<Rating>>(
+      stream: _ratingService.getForemanRatings(foremanId),
+      builder: (context, snapshot) {
+        print('🔥 StreamBuilder state: ${snapshot.connectionState}');
+        print('🔥 Has data: ${snapshot.hasData}');
+        print('🔥 Data length: ${snapshot.data?.length ?? 0}');
+        print('🔥 Has error: ${snapshot.hasError}');
+        if (snapshot.hasError) {
+          print('🔥 Error: ${snapshot.error}');
+        }
+
         if (snapshot.hasError) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.white)),
+                Icon(
+                  Icons.info_outline,
+                  size: 80,
+                  color: Colors.white.withOpacity(0.5),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Unable to load ratings',
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: Colors.white.withOpacity(0.8),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Please check your connection and try again',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.6),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () => setState(() {}),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
                   child: const Text('Retry'),
                 ),
               ],
             ),
           );
         }
-        
+
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Colors.white));
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          );
         }
 
-        final docs = snapshot.data?.docs ?? [];
+        final ratings = snapshot.data ?? [];
+        print('🔥 Received ${ratings.length} ratings for display');
 
-        if (docs.isEmpty) {
+        // Debug: Print first few ratings
+        for (int i = 0; i < ratings.length && i < 3; i++) {
+          final rating = ratings[i];
+          print(
+            '🔥 Rating $i: ${rating.projectName} by ${rating.ownerName} for foreman ${rating.foremanId}',
+          );
+        }
+
+        if (ratings.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -246,10 +296,19 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Your ratings will appear here when owners rate your work',
+                  'Your performance ratings will appear here when supervisors evaluate your work',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.white.withOpacity(0.6),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Debug: Searching for foreman ID: $foremanId',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.white.withOpacity(0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -261,23 +320,10 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Debug info
-            Container(
-              padding: const EdgeInsets.all(8),
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Debug: Found ${docs.length} ratings for foreman ID: $foremanId',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ),
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 16),
               child: Text(
-                'Your Ratings History (${docs.length})',
+                'Performance History (${ratings.length})',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -287,63 +333,10 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
             ),
             Expanded(
               child: ListView.builder(
-                itemCount: docs.length,
+                itemCount: ratings.length,
                 itemBuilder: (context, index) {
-                  final data = docs[index].data() as Map<String, dynamic>;
-                  final docId = docs[index].id;
-                  
-                  return Card(
-                    color: Colors.white.withOpacity(0.1),
-                    margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Debug info for each rating
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            margin: const EdgeInsets.only(bottom: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'Doc ID: $docId | Created: ${data['createdAt']}',
-                              style: const TextStyle(color: Colors.white, fontSize: 10),
-                            ),
-                          ),
-                          Text(
-                            'Project: ${data['projectName'] ?? 'Unknown'}',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'From: ${data['ownerName'] ?? 'Unknown'}',
-                            style: const TextStyle(color: Colors.white70, fontSize: 14),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Text('Overall Rating: ', style: TextStyle(color: Colors.white70)),
-                              ...List.generate(5, (i) => Icon(
-                                Icons.star,
-                                size: 16,
-                                color: i < (data['overallRating'] ?? 0) ? Colors.amber : Colors.grey,
-                              )),
-                              Text(' ${data['overallRating']}/5', style: const TextStyle(color: Colors.white)),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          if (data['comments'] != null && data['comments'].toString().isNotEmpty)
-                            Text(
-                              'Comments: ${data['comments']}',
-                              style: const TextStyle(color: Colors.white70, fontSize: 12),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
+                  final rating = ratings[index];
+                  return _buildRatingCard(rating);
                 },
               ),
             ),
@@ -353,43 +346,49 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
     );
   }
 
-  Future<void> _createTestRating(BuildContext context, String foremanId) async {
+  Future<void> _createDemoRating(BuildContext context, String foremanId) async {
     try {
-      print('🔥🔥🔥 CREATING TEST RATING FOR FOREMAN: $foremanId');
-      
-      await FirebaseFirestore.instance.collection('ratings').add({
-        'id': 'foreman-test-${DateTime.now().millisecondsSinceEpoch}',
-        'foremanId': foremanId,
-        'foremanName': 'Test Foreman',
-        'ownerId': 'test-owner-123',
-        'ownerName': 'Test Owner',
-        'overallRating': 4,
-        'qualityRating': 4,
-        'timelinessRating': 5,
-        'communicationRating': 3,
-        'safetyRating': 5,
-        'comments': 'This is a test rating created from foreman dashboard',
-        'createdAt': DateTime.now().toIso8601String(),
-        'projectName': 'Test Project from Foreman View',
-        'averageRating': 4.2,
-      });
-      
-      print('🔥 Test rating created successfully for foreman: $foremanId');
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Test rating created! It should appear above now.'),
-          backgroundColor: Colors.green,
-        ),
+      print('🔥🔥🔥 CREATING DEMO RATING FOR FOREMAN: $foremanId');
+
+      final rating = Rating(
+        id: 'demo-${DateTime.now().millisecondsSinceEpoch}',
+        foremanId: foremanId,
+        foremanName: 'Demo Foreman',
+        ownerId: 'demo-owner-123',
+        ownerName: 'Demo Owner',
+        overallRating: 4,
+        qualityRating: 4,
+        timelinessRating: 5,
+        communicationRating: 3,
+        safetyRating: 5,
+        comments:
+            'This is a demo rating created for testing purposes. Great work on the project!',
+        createdAt: DateTime.now(),
+        projectName: 'Demo Construction Project',
       );
+
+      await _ratingService.createRating(rating);
+
+      print('🔥 Demo rating created successfully for foreman: $foremanId');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Demo rating created! It should appear above now.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      print('🔥 Error creating test rating: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Failed to create test rating: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      print('🔥 Error creating demo rating: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Failed to create demo rating: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -436,7 +435,9 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: _getRatingColor(rating.averageRating),
                       borderRadius: BorderRadius.circular(20),
@@ -505,46 +506,48 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
     ];
 
     return Column(
-      children: categories.map((category) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 100,
-                child: Text(
-                  category['label'] as String,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withOpacity(0.8),
+      children:
+          categories.map((category) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 100,
+                    child: Text(
+                      category['label'] as String,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
                   ),
-                ),
+                  Expanded(
+                    child: Row(
+                      children: List.generate(5, (index) {
+                        return Icon(
+                          Icons.star,
+                          size: 16,
+                          color:
+                              index < (category['value'] as int)
+                                  ? Colors.amber
+                                  : Colors.white.withOpacity(0.3),
+                        );
+                      }),
+                    ),
+                  ),
+                  Text(
+                    '${category['value']}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: Row(
-                  children: List.generate(5, (index) {
-                    return Icon(
-                      Icons.star,
-                      size: 16,
-                      color: index < (category['value'] as int)
-                          ? Colors.amber
-                          : Colors.white.withOpacity(0.3),
-                    );
-                  }),
-                ),
-              ),
-              Text(
-                '${category['value']}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
+            );
+          }).toList(),
     );
   }
 
@@ -554,7 +557,22 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
     return Colors.red;
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+  String _formatDate(dynamic date) {
+    if (date == null) return 'Unknown Date';
+
+    try {
+      DateTime dateTime;
+      if (date is DateTime) {
+        dateTime = date;
+      } else if (date is String) {
+        dateTime = DateTime.parse(date);
+      } else {
+        return 'Invalid Date';
+      }
+
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    } catch (e) {
+      return 'Invalid Date';
+    }
   }
 }

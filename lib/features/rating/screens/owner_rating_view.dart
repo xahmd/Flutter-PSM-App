@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import '../../../firebase_options.dart';
 import '../models/rating.dart';
 import '../services/rating_service.dart';
 import 'create_rating_screen.dart';
@@ -45,11 +47,7 @@ class _OwnerRatingViewState extends State<OwnerRatingView>
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF2C3E50),
-            Color(0xFF3498DB),
-            Color(0xFF9B59B6),
-          ],
+          colors: [Color(0xFF2C3E50), Color(0xFF3498DB), Color(0xFF9B59B6)],
           stops: [0.0, 0.5, 1.0],
         ),
       ),
@@ -89,11 +87,7 @@ class _OwnerRatingViewState extends State<OwnerRatingView>
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withOpacity(0.3)),
           ),
-          child: const Icon(
-            Icons.business,
-            size: 50,
-            color: Colors.white,
-          ),
+          child: const Icon(Icons.business, size: 50, color: Colors.white),
         ),
         const SizedBox(height: 20),
         const Text(
@@ -124,27 +118,38 @@ class _OwnerRatingViewState extends State<OwnerRatingView>
       builder: (context, snapshot) {
         final ratings = snapshot.data ?? [];
         final totalRatings = ratings.length;
-        final avgRating = ratings.isEmpty
-            ? 0.0
-            : ratings
-                    .map((r) => r.averageRating)
-                    .reduce((a, b) => a + b) /
-                totalRatings;
+        final avgRating =
+            ratings.isEmpty
+                ? 0.0
+                : ratings.map((r) => r.averageRating).reduce((a, b) => a + b) /
+                    totalRatings;
         final uniqueForemen = ratings.map((r) => r.foremanId).toSet().length;
 
         return Row(
           children: [
             Expanded(
-                child: _buildStatCard(
-                    'Total Ratings', totalRatings.toString(), Icons.rate_review)),
+              child: _buildStatCard(
+                'Total Ratings',
+                totalRatings.toString(),
+                Icons.rate_review,
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
-                child: _buildStatCard(
-                    'Foremen', uniqueForemen.toString(), Icons.engineering)),
+              child: _buildStatCard(
+                'Foremen',
+                uniqueForemen.toString(),
+                Icons.engineering,
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
-                child: _buildStatCard(
-                    'Avg Rating', avgRating.toStringAsFixed(1), Icons.star)),
+              child: _buildStatCard(
+                'Avg Rating',
+                avgRating.toStringAsFixed(1),
+                Icons.star,
+              ),
+            ),
           ],
         );
       },
@@ -195,13 +200,13 @@ class _OwnerRatingViewState extends State<OwnerRatingView>
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: _ratingService.getForemen(),
       builder: (context, snapshot) {
-        print('🔥🔥🔥 OWNER VIEW: Loading foremen list...');
-        print('🔥 Connection state: ${snapshot.connectionState}');
-        print('🔥 Has data: ${snapshot.hasData}');
-        print('🔥 Data: ${snapshot.data}');
-        
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          );
+        }
+
         final foremen = snapshot.data ?? [];
-        print('🔥 Number of foremen found: ${foremen.length}');
 
         if (foremen.isEmpty) {
           return Center(
@@ -215,44 +220,21 @@ class _OwnerRatingViewState extends State<OwnerRatingView>
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'No foremen found',
+                  'No team members found',
                   style: TextStyle(
                     fontSize: 20,
                     color: Colors.white.withOpacity(0.8),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 20),
-                // Add test button to manually create foreman users
-                ElevatedButton(
-                  onPressed: () async {
-                    print('🔥🔥🔥 CREATING TEST FOREMEN 🔥🔥🔥');
-                    try {
-                      // Create test foreman users
-                      await FirebaseFirestore.instance.collection('users').doc('test-foreman-1').set({
-                        'role': 'foreman',
-                        'name': 'John Smith',
-                        'email': 'john@example.com',
-                        'createdAt': DateTime.now().toIso8601String(),
-                      });
-                      
-                      await FirebaseFirestore.instance.collection('users').doc('test-foreman-2').set({
-                        'role': 'foreman',
-                        'name': 'Mike Johnson',
-                        'email': 'mike@example.com',
-                        'createdAt': DateTime.now().toIso8601String(),
-                      });
-                      
-                      print('🔥 Test foremen created successfully!');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Test foremen created! Refresh to see them.')),
-                      );
-                    } catch (e) {
-                      print('🔥 Error creating test foremen: $e');
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                  child: const Text('Create Test Foremen'),
+                const SizedBox(height: 12),
+                Text(
+                  'Your team members will appear here',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.6),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -265,7 +247,7 @@ class _OwnerRatingViewState extends State<OwnerRatingView>
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 16),
               child: Text(
-                'Your Foremen',
+                'Your Team (${foremen.length})',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -403,7 +385,11 @@ class _OwnerRatingViewState extends State<OwnerRatingView>
   }
 
   Widget _buildActionButton(
-      String title, IconData icon, Color color, VoidCallback onTap) {
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -439,18 +425,20 @@ class _OwnerRatingViewState extends State<OwnerRatingView>
     Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            CreateRatingScreen(
-          foremanId: foremanId,
-          foremanName: foremanName,
-        ),
+        pageBuilder:
+            (context, animation, secondaryAnimation) => CreateRatingScreen(
+              foremanId: foremanId,
+              foremanName: foremanName,
+            ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(1.0, 0.0);
           const end = Offset.zero;
           const curve = Curves.ease;
 
-          var tween = Tween(begin: begin, end: end)
-              .chain(CurveTween(curve: curve));
+          var tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: curve));
 
           return SlideTransition(
             position: animation.drive(tween),
@@ -464,23 +452,28 @@ class _OwnerRatingViewState extends State<OwnerRatingView>
   void _showAnalytics() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.analytics, color: Colors.blue),
-            SizedBox(width: 8),
-            Text('Analytics'),
-          ],
-        ),
-        content: const Text('Detailed analytics and performance insights coming soon!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.analytics, color: Colors.blue),
+                SizedBox(width: 8),
+                Text('Analytics'),
+              ],
+            ),
+            content: const Text(
+              'Detailed analytics and performance insights coming soon!',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 }

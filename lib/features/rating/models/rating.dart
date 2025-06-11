@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Rating {
   final String id;
   final String foremanId;
@@ -42,9 +44,33 @@ class Rating {
       communicationRating: json['communicationRating'] ?? 0,
       safetyRating: json['safetyRating'] ?? 0,
       comments: json['comments'] ?? '',
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: _parseDateTime(json['createdAt']),
       projectName: json['projectName'] ?? '',
     );
+  }
+
+  // Helper method to parse various date formats
+  static DateTime _parseDateTime(dynamic dateValue) {
+    if (dateValue == null) return DateTime.now();
+
+    try {
+      if (dateValue is String) {
+        // Handle ISO string format
+        return DateTime.parse(dateValue);
+      } else if (dateValue is Timestamp) {
+        // Handle Firestore Timestamp
+        return dateValue.toDate();
+      } else if (dateValue is int) {
+        // Handle milliseconds since epoch
+        return DateTime.fromMillisecondsSinceEpoch(dateValue);
+      } else {
+        print('🔥 Unknown date format: $dateValue (${dateValue.runtimeType})');
+        return DateTime.now();
+      }
+    } catch (e) {
+      print('🔥 Error parsing date $dateValue: $e');
+      return DateTime.now();
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -62,11 +88,16 @@ class Rating {
       'comments': comments,
       'createdAt': createdAt.toIso8601String(),
       'projectName': projectName,
+      'averageRating': averageRating, // Add this line
     };
   }
 
   double get averageRating {
-    return (overallRating + qualityRating + timelinessRating +
-            communicationRating + safetyRating) / 5.0;
+    return (overallRating +
+            qualityRating +
+            timelinessRating +
+            communicationRating +
+            safetyRating) /
+        5.0;
   }
 }
