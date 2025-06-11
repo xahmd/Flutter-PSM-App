@@ -26,6 +26,7 @@ class _PaymentAmountPageState extends State<PaymentAmountPage> with SingleTicker
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _hoursController = TextEditingController();
+  final _referenceController = TextEditingController();
   bool _isAmountMode = true;
   double? _hourlyRate;
   bool _isLoading = false;
@@ -50,6 +51,7 @@ class _PaymentAmountPageState extends State<PaymentAmountPage> with SingleTicker
   void dispose() {
     _amountController.dispose();
     _hoursController.dispose();
+    _referenceController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -110,9 +112,10 @@ class _PaymentAmountPageState extends State<PaymentAmountPage> with SingleTicker
         'amount': amount,
         'hours': _isAmountMode ? null : double.tryParse(_hoursController.text),
         'timestamp': FieldValue.serverTimestamp(),
-        'status': 'PaymentStatus.initiated',
+        'status': PaymentStatus.initiated.toString().split('.').last,
         'ownerId': currentUser.uid,
         'ownerEmail': ownerEmail,
+        'reference': _referenceController.text.trim(),
       });
 
       if (mounted) {
@@ -464,6 +467,33 @@ class _PaymentAmountPageState extends State<PaymentAmountPage> with SingleTicker
                           ],
                         ],
                       ),
+                    const SizedBox(height: 24),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 5,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextFormField(
+                        controller: _referenceController,
+                        decoration: InputDecoration(
+                          hintText: 'Enter payment reference (optional)',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.all(16),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 32),
                     ElevatedButton(
                       onPressed: _isLoading

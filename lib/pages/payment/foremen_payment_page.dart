@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/payment_status.dart';
+import 'foremen_analytics_page.dart';
 
 class ForemenPaymentPage extends StatelessWidget {
   const ForemenPaymentPage({super.key});
@@ -68,6 +69,19 @@ class ForemenPaymentPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('My Payments'),
         backgroundColor: Colors.deepOrange,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.analytics),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ForemenAnalyticsPage(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
@@ -100,7 +114,7 @@ class ForemenPaymentPage extends StatelessWidget {
                       const Text(
                         'Current Balance',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           color: Colors.grey,
                         ),
                       ),
@@ -108,7 +122,7 @@ class ForemenPaymentPage extends StatelessWidget {
                       Text(
                         'RM ${currentBalance.toStringAsFixed(2)}',
                         style: const TextStyle(
-                          fontSize: 32,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Colors.deepOrange,
                         ),
@@ -172,86 +186,207 @@ class ForemenPaymentPage extends StatelessWidget {
                       );
                     }
 
-                    return ListView.builder(
-                      itemCount: payments.length,
-                      itemBuilder: (context, index) {
-                        final payment = payments[index].data() as Map<String, dynamic>;
-                        final amount = payment['amount'] as double;
-                        final status = payment['status'] as String;
-                        final timestamp = payment['timestamp'] as Timestamp?;
-                        final ownerName = payment['ownerName'] as String? ?? 'Unknown Owner';
-                        final ownerEmail = payment['ownerEmail'] as String?;
+                    // Separate pending and other payments
+                    final pendingPayments = payments.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final status = data['status'] as String;
+                      return status.contains('pending') || status.contains('initiated');
+                    }).toList();
 
-                        PaymentStatus paymentStatus;
-                        if (status.contains('paid')) {
-                            paymentStatus = PaymentStatus.paid;
-                        } else if (status.contains('cancelled')) {
-                            paymentStatus = PaymentStatus.cancelled;
-                        } else if (status.contains('initiated')) {
-                            paymentStatus = PaymentStatus.initiated;
-                        } else {
-                            paymentStatus = PaymentStatus.pending;
-                        }
+                    final otherPayments = payments.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final status = data['status'] as String;
+                      return !status.contains('pending') && !status.contains('initiated');
+                    }).toList();
 
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: paymentStatus == PaymentStatus.paid
-                                  ? Colors.green.shade50
-                                  : paymentStatus == PaymentStatus.initiated
-                                      ? Colors.blue.shade50
-                                      : paymentStatus == PaymentStatus.cancelled
-                                          ? Colors.red.shade50
-                                          : Colors.amber.shade50,
-                              child: Icon(
-                                paymentStatus == PaymentStatus.paid
-                                    ? Icons.check_circle
-                                    : paymentStatus == PaymentStatus.initiated
-                                        ? Icons.pending_actions
-                                        : paymentStatus == PaymentStatus.cancelled
-                                            ? Icons.cancel
-                                            : Icons.payment,
-                                color: paymentStatus == PaymentStatus.paid
-                                    ? Colors.green
-                                    : paymentStatus == PaymentStatus.initiated
-                                        ? Colors.blue
-                                        : paymentStatus == PaymentStatus.cancelled
-                                            ? Colors.red
-                                            : Colors.amber,
+                    return ListView(
+                      children: [
+                        if (pendingPayments.isNotEmpty) ...[
+                          const Padding(
+                            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                            child: Text(
+                              'Pending Payments',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber,
                               ),
                             ),
-                            title: Text(
-                              'RM ${amount.toStringAsFixed(2)}',
-                              style: const TextStyle(
+                          ),
+                          ...pendingPayments.map((doc) {
+                            final payment = doc.data() as Map<String, dynamic>;
+                            final amount = payment['amount'] as double;
+                            final status = payment['status'] as String;
+                            final timestamp = payment['timestamp'] as Timestamp?;
+                            final ownerName = payment['ownerName'] as String? ?? 'Unknown Owner';
+                            final ownerEmail = payment['ownerEmail'] as String?;
+                            final reference = payment['reference'] as String?;
+
+                            PaymentStatus paymentStatus;
+                            if (status.contains('paid')) {
+                              paymentStatus = PaymentStatus.paid;
+                            } else if (status.contains('cancelled')) {
+                              paymentStatus = PaymentStatus.cancelled;
+                            } else if (status.contains('initiated')) {
+                              paymentStatus = PaymentStatus.initiated;
+                            } else {
+                              paymentStatus = PaymentStatus.pending;
+                            }
+
+                            return Card(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 4,
+                              ),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: Colors.amber.shade50,
+                                  child: const Icon(
+                                    Icons.pending_actions,
+                                    color: Colors.amber,
+                                  ),
+                                ),
+                                title: Text(
+                                  'RM ${amount.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _formatDate(timestamp?.toDate()),
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    _buildPaymentStatusChip(paymentStatus),
+                                    if (ownerEmail != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'From: $ownerEmail',
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ],
+                                    if (reference != null && reference.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Ref: $reference',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                isThreeLine: true,
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                        if (otherPayments.isNotEmpty) ...[
+                          const Padding(
+                            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                            child: Text(
+                              'Payment History',
+                              style: TextStyle(
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _formatDate(timestamp?.toDate()),
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                                const SizedBox(height: 4),
-                                _buildPaymentStatusChip(paymentStatus),
-                                if (ownerEmail != null) ...[
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'From: $ownerEmail',
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            isThreeLine: true,
                           ),
-                        );
-                      },
+                          ...otherPayments.map((doc) {
+                            final payment = doc.data() as Map<String, dynamic>;
+                            final amount = payment['amount'] as double;
+                            final status = payment['status'] as String;
+                            final timestamp = payment['timestamp'] as Timestamp?;
+                            final ownerName = payment['ownerName'] as String? ?? 'Unknown Owner';
+                            final ownerEmail = payment['ownerEmail'] as String?;
+                            final reference = payment['reference'] as String?;
+
+                            PaymentStatus paymentStatus;
+                            if (status.contains('paid')) {
+                              paymentStatus = PaymentStatus.paid;
+                            } else if (status.contains('cancelled')) {
+                              paymentStatus = PaymentStatus.cancelled;
+                            } else if (status.contains('initiated')) {
+                              paymentStatus = PaymentStatus.initiated;
+                            } else {
+                              paymentStatus = PaymentStatus.pending;
+                            }
+
+                            return Card(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 4,
+                              ),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: paymentStatus == PaymentStatus.paid
+                                      ? Colors.green.shade50
+                                      : paymentStatus == PaymentStatus.initiated
+                                          ? Colors.blue.shade50
+                                          : paymentStatus == PaymentStatus.cancelled
+                                              ? Colors.red.shade50
+                                              : Colors.amber.shade50,
+                                  child: Icon(
+                                    paymentStatus == PaymentStatus.paid
+                                        ? Icons.check_circle
+                                        : paymentStatus == PaymentStatus.initiated
+                                            ? Icons.pending_actions
+                                            : paymentStatus == PaymentStatus.cancelled
+                                                ? Icons.cancel
+                                                : Icons.payment,
+                                    color: paymentStatus == PaymentStatus.paid
+                                        ? Colors.green
+                                        : paymentStatus == PaymentStatus.initiated
+                                            ? Colors.blue
+                                            : paymentStatus == PaymentStatus.cancelled
+                                                ? Colors.red
+                                                : Colors.amber,
+                                  ),
+                                ),
+                                title: Text(
+                                  'RM ${amount.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _formatDate(timestamp?.toDate()),
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    _buildPaymentStatusChip(paymentStatus),
+                                    if (ownerEmail != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'From: $ownerEmail',
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    ],
+                                    if (reference != null && reference.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Ref: $reference',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                isThreeLine: true,
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                      ],
                     );
                   },
                 ),

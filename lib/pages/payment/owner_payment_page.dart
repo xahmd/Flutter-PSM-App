@@ -5,6 +5,8 @@ import '../../models/payment_status.dart';
 import 'payment_amount_page.dart';
 import 'card_payment_page.dart';
 import 'duitnow_payment_page.dart';
+import 'owner_analytics_page.dart';
+import 'payment_processing_page.dart';
 
 class OwnerPaymentPage extends StatelessWidget {
   const OwnerPaymentPage({super.key});
@@ -77,7 +79,7 @@ class OwnerPaymentPage extends StatelessWidget {
         text = 'Initiated';
         break;
       case PaymentStatus.pending:
-        color = Colors.orange;
+        color = Colors.amber;
         text = 'Pending';
         break;
       case PaymentStatus.paid:
@@ -90,12 +92,21 @@ class OwnerPaymentPage extends StatelessWidget {
         break;
     }
 
-    return Chip(
-      label: Text(
-        text,
-        style: const TextStyle(color: Colors.white),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color),
       ),
-      backgroundColor: color,
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
     );
   }
 
@@ -202,16 +213,31 @@ class OwnerPaymentPage extends StatelessWidget {
     }
   }
 
+  String _formatDate(dynamic timestamp) {
+    if (timestamp == null) return 'N/A';
+    
+    DateTime date;
+    if (timestamp is Timestamp) {
+      date = timestamp.toDate();
+    } else if (timestamp is DateTime) {
+      date = timestamp;
+    } else {
+      return 'N/A';
+    }
+    
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
   Widget _buildInitiatedPaymentsSection(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('owner_payments')
-          .where('status', isEqualTo: 'PaymentStatus.initiated')
+          .where('status', whereIn: ['initiated', 'pending'])
+          .orderBy('status')
           .orderBy('timestamp', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          print('Error in initiated payments: ${snapshot.error}');
           return Center(child: Text('Error: ${snapshot.error}'));
         }
 
@@ -220,21 +246,23 @@ class OwnerPaymentPage extends StatelessWidget {
         }
 
         final payments = snapshot.data?.docs ?? [];
-        print('Number of initiated payments: ${payments.length}');
-        
-        // Sort payments by timestamp in memory (if orderBy is removed due to index issue)
-        // payments.sort((a, b) {
-        //   final aData = a.data() as Map<String, dynamic>;
-        //   final bData = b.data() as Map<String, dynamic>;
-        //   final aTimestamp = (aData['timestamp'] as Timestamp).toDate();
-        //   final bTimestamp = (bData['timestamp'] as Timestamp).toDate();
-        //   return bTimestamp.compareTo(aTimestamp); // Descending order
-        // });
 
         if (payments.isEmpty) {
-          print('No initiated payments found');
           return const SizedBox.shrink();
         }
+
+        // Separate payments by status
+        final initiatedPayments = payments.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final status = data['status'] as String;
+          return status == 'initiated';
+        }).toList();
+
+        final pendingPayments = payments.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final status = data['status'] as String;
+          return status == 'pending';
+        }).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,102 +278,308 @@ class OwnerPaymentPage extends StatelessWidget {
               ),
             ),
             SizedBox(
-              height: 200,
-              child: ListView.builder(
+              height: 220,
+              child: ListView(
                 scrollDirection: Axis.horizontal,
-                itemCount: payments.length,
-                itemBuilder: (context, index) {
-                  final payment = payments[index].data() as Map<String, dynamic>;
-                  print('Payment data: $payment');
-                  final paymentModel = PaymentStatusModel.fromMap(
-                    payments[index].id,
-                    payment,
-                  );
-
-                  return Container(
-                    width: 300,
-                    margin: const EdgeInsets.only(left: 16, right: 8),
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: Colors.deepOrange.shade50,
-                                  child: const Icon(
-                                    Icons.person,
-                                    color: Colors.deepOrange,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    paymentModel.foremenName,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Amount: RM ${paymentModel.amount.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.deepOrange,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Date: ${paymentModel.timestamp?.day ?? '--'}/${paymentModel.timestamp?.month ?? '--'}/${paymentModel.timestamp?.year ?? '----'}',
-                              style: const TextStyle(
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const Spacer(),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () => _handlePaymentMethod(context, paymentModel),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.deepOrange,
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    child: const Text('Pay Now'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: () => _cancelPayment(context, paymentModel.id),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.red,
-                                      side: const BorderSide(color: Colors.red),
-                                    ),
-                                    child: const Text('Cancel'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
+                children: [
+                  // Show initiated payments first
+                  ...initiatedPayments.map((doc) {
+                    final payment = doc.data() as Map<String, dynamic>;
+                    final paymentModel = PaymentStatusModel.fromMap(
+                      doc.id,
+                      payment,
+                    );
+                    return _buildPaymentCard(
+                      context,
+                      payment,
+                      paymentModel,
+                      true,
+                      Colors.blue,
+                    );
+                  }).toList(),
+                  // Then show pending payments
+                  ...pendingPayments.map((doc) {
+                    final payment = doc.data() as Map<String, dynamic>;
+                    final paymentModel = PaymentStatusModel.fromMap(
+                      doc.id,
+                      payment,
+                    );
+                    return _buildPaymentCard(
+                      context,
+                      payment,
+                      paymentModel,
+                      false,
+                      Colors.orange,
+                    );
+                  }).toList(),
+                ],
               ),
             ),
             const Divider(height: 32),
           ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPaymentCard(
+    BuildContext context,
+    Map<String, dynamic> payment,
+    PaymentStatusModel paymentModel,
+    bool isInitiated,
+    Color statusColor,
+  ) {
+    return Container(
+      width: 280,
+      margin: const EdgeInsets.only(left: 16, right: 8),
+      child: Card(
+        elevation: 2,
+        child: InkWell(
+          onTap: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PaymentProcessingPage(
+                  paymentId: paymentModel.id,
+                  paymentData: payment,
+                ),
+              ),
+            );
+
+            if (result == true && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Payment status updated successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          },
+          child: Stack(
+            children: [
+              // Status indicator line
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: Container(
+                  width: 4,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(4),
+                      bottomLeft: Radius.circular(4),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: Colors.deepOrange.shade50,
+                          child: const Icon(
+                            Icons.person,
+                            color: Colors.deepOrange,
+                            size: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            paymentModel.foremenName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'RM ${paymentModel.amount.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepOrange,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _formatDate(payment['timestamp']),
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                      ),
+                    ),
+                    if (payment['reference'] != null && payment['reference'].toString().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Ref: ${payment['reference']}',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            isInitiated ? 'Initiated' : 'Pending',
+                            style: TextStyle(
+                              color: statusColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.touch_app,
+                              color: Colors.deepOrange,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Tap to process',
+                              style: TextStyle(
+                                color: Colors.deepOrange,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentHistorySection(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('owner_payments')
+          .where('status', whereIn: ['paid', 'cancelled'])
+          .orderBy('status')
+          .orderBy('timestamp', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final payments = snapshot.data?.docs ?? [];
+
+        if (payments.isEmpty) {
+          return const Center(
+            child: Text(
+              'No payment history yet',
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: payments.length,
+          itemBuilder: (context, index) {
+            final payment = payments[index].data() as Map<String, dynamic>;
+            final paymentModel = PaymentStatusModel.fromMap(
+              payments[index].id,
+              payment,
+            );
+
+            return Card(
+              margin: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: paymentModel.status == PaymentStatus.paid
+                      ? Colors.green.shade50
+                      : Colors.red.shade50,
+                  child: Icon(
+                    paymentModel.status == PaymentStatus.paid
+                        ? Icons.check_circle
+                        : Icons.cancel,
+                    color: paymentModel.status == PaymentStatus.paid
+                        ? Colors.green
+                        : Colors.red,
+                  ),
+                ),
+                title: Text(
+                  'RM ${paymentModel.amount.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    Text(
+                      paymentModel.foremenName,
+                      style: const TextStyle(
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _formatDate(paymentModel.timestamp),
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                      ),
+                    ),
+                    if (payment['reference'] != null && payment['reference'].toString().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Ref: ${payment['reference']}',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                trailing: _buildPaymentStatusChip(paymentModel.status),
+              ),
+            );
+          },
         );
       },
     );
@@ -387,96 +621,7 @@ class OwnerPaymentPage extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('owner_payments')
-                    .where('foremenId', isEqualTo: foremenId)
-                    .orderBy('timestamp', descending: true)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  final payments = snapshot.data?.docs ?? [];
-
-                  if (payments.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'No payment history yet',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    itemCount: payments.length,
-                    itemBuilder: (context, index) {
-                      final payment = payments[index].data() as Map<String, dynamic>;
-                      final paymentModel = PaymentStatusModel.fromMap(
-                        payments[index].id,
-                        payment,
-                      );
-
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.deepOrange.shade50,
-                            child: Icon(
-                              paymentModel.paymentMethod == 'DuitNow QR'
-                                  ? Icons.qr_code
-                                  : Icons.credit_card,
-                              color: Colors.deepOrange,
-                            ),
-                          ),
-                          title: Text(
-                            'RM ${paymentModel.amount.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${paymentModel.timestamp?.day ?? '--'}/${paymentModel.timestamp?.month ?? '--'}/${paymentModel.timestamp?.year ?? '----'}',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              const SizedBox(height: 4),
-                              _buildPaymentStatusChip(paymentModel.status),
-                            ],
-                          ),
-                          trailing: paymentModel.status == PaymentStatus.initiated || paymentModel.status == PaymentStatus.pending
-                              ? ElevatedButton(
-                                  onPressed: () => _cancelPayment(context, paymentModel.id),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  child: const Text('Cancel'),
-                                )
-                              : Text(
-                                  paymentModel.paymentMethod ?? 'N/A',
-                                  style: const TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                          isThreeLine: true,
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
+              child: _buildPaymentHistorySection(context),
             ),
           ],
         ),
@@ -669,6 +814,20 @@ class OwnerPaymentPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Owner Payment Management'),
         backgroundColor: Colors.deepOrange,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.analytics),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OwnerAnalyticsPage(),
+                ),
+              );
+            },
+            tooltip: 'View Analytics',
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -734,7 +893,7 @@ class OwnerPaymentPage extends StatelessWidget {
                                   style: const TextStyle(
                                     color: Colors.deepOrange,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 13,
+                                    fontSize: 10,
                                   ),
                                 ),
                                 const SizedBox(height: 4),

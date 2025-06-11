@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../models/payment_status.dart';
 import 'payment_success_page.dart';
 
 class DuitNowPaymentPage extends StatefulWidget {
@@ -47,7 +48,7 @@ class _DuitNowPaymentPageState extends State<DuitNowPaymentPage> {
           .collection('owner_payments')
           .doc(widget.paymentId);
       batch.update(paymentRef, {
-        'status': 'paid',
+        'status': PaymentStatus.paid.toString().split('.').last,
         'paymentMethod': 'DuitNow QR',
       });
       
