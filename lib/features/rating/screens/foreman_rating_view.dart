@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
-import '../../../firebase_options.dart';
 import '../models/rating.dart';
 import '../services/rating_service.dart';
 
@@ -52,7 +49,7 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1B4332), Color(0xFF2D6A4F), Color(0xFF40916C)],
+          colors: [Color(0xFFFF6B35), Color(0xFFFF8F65), Color(0xFFFFB085)],
           stops: [0.0, 0.5, 1.0],
         ),
       ),
@@ -211,12 +208,8 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
     return StreamBuilder<List<Rating>>(
       stream: _ratingService.getForemanRatings(foremanId),
       builder: (context, snapshot) {
-        print('🔥 StreamBuilder state: ${snapshot.connectionState}');
-        print('🔥 Has data: ${snapshot.hasData}');
-        print('🔥 Data length: ${snapshot.data?.length ?? 0}');
-        print('🔥 Has error: ${snapshot.hasError}');
         if (snapshot.hasError) {
-          print('🔥 Error: ${snapshot.error}');
+          print('Error: ${snapshot.error}');
         }
 
         if (snapshot.hasError) {
@@ -250,7 +243,9 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () => setState(() {}),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFD35400),
+                  ),
                   child: const Text('Retry'),
                 ),
               ],
@@ -265,13 +260,13 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
         }
 
         final ratings = snapshot.data ?? [];
-        print('🔥 Received ${ratings.length} ratings for display');
+        print(' Received ${ratings.length} ratings for display');
 
         // Debug: Print first few ratings
         for (int i = 0; i < ratings.length && i < 3; i++) {
           final rating = ratings[i];
           print(
-            '🔥 Rating $i: ${rating.projectName} by ${rating.ownerName} for foreman ${rating.foremanId}',
+            ' Rating $i: ${rating.projectName} by ${rating.ownerName} for foreman ${rating.foremanId}',
           );
         }
 
@@ -348,7 +343,7 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
 
   Future<void> _createDemoRating(BuildContext context, String foremanId) async {
     try {
-      print('🔥🔥🔥 CREATING DEMO RATING FOR FOREMAN: $foremanId');
+      print('CREATING DEMO RATING FOR FOREMAN: $foremanId');
 
       final rating = Rating(
         id: 'demo-${DateTime.now().millisecondsSinceEpoch}',
@@ -369,18 +364,18 @@ class _ForemanRatingViewState extends State<ForemanRatingView>
 
       await _ratingService.createRating(rating);
 
-      print('🔥 Demo rating created successfully for foreman: $foremanId');
+      print('Demo rating created successfully for foreman: $foremanId');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ Demo rating created! It should appear above now.'),
-            backgroundColor: Colors.green,
+            backgroundColor: Color(0xFFD35400),
           ),
         );
       }
     } catch (e) {
-      print('🔥 Error creating demo rating: $e');
+      print('Error creating demo rating: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

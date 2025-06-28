@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
-import '../../../firebase_options.dart';
 import '../models/rating.dart';
 import '../services/rating_service.dart';
 
@@ -374,12 +372,12 @@ class _CreateRatingScreenState extends State<CreateRatingScreen> {
         projectName: _projectNameController.text,
       );
 
-      print('🔥🔥🔥 SUBMITTING RATING 🔥🔥🔥');
-      print('🔥 Foreman ID: ${widget.foremanId}');
-      print('🔥 Foreman Name: ${widget.foremanName}');
-      print('🔥 Owner ID: ${user.uid}');
-      print('🔥 Project: ${_projectNameController.text}');
-      print('🔥 Average Rating: ${rating.averageRating}');
+      print(' SUBMITTING RATING ');
+      print('Foreman ID: ${widget.foremanId}');
+      print(' Foreman Name: ${widget.foremanName}');
+      print(' Owner ID: ${user.uid}');
+      print('Project: ${_projectNameController.text}');
+      print('Average Rating: ${rating.averageRating}');
 
       await _ratingService.createRating(rating);
 
@@ -409,7 +407,7 @@ class _CreateRatingScreenState extends State<CreateRatingScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      print('🔥 Error submitting rating: $e');
+      print(' Error submitting rating: $e');
       if (mounted) {
         String message = '❌ Error submitting rating';
         Color backgroundColor = Colors.red;
